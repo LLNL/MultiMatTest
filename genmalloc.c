@@ -41,7 +41,7 @@ void *genvector_p(const char *name, int inum, size_t elsize, const char *file,
   size_t mem_size;
 
   mem_size = inum * elsize;
-  cudaMallocManaged(&out, (size_t)inum * elsize);
+  out = (void *)malloc((size_t)inum * elsize);
   genmalloc_memory_add(out, name, mem_size);
 
   return (out);
@@ -59,11 +59,11 @@ void **genmatrix_p(const char *name, int jnum, int inum, size_t elsize,
   sprintf((char *)ptr_name, "%s ptr", name);
 
   mem_size = jnum * sizeof(void *);
-  cudaMallocManaged(&out, mem_size);
+  out = (void **)malloc(mem_size);
   genmalloc_memory_add(out, ptr_name, mem_size);
 
   mem_size = jnum * inum * elsize;
-  cudaMallocManaged(&out[0], (size_t)jnum * (size_t)inum * elsize);
+  out[0] = (void **)malloc((size_t)jnum * (size_t)inum * elsize);
   genmalloc_memory_add(out[0], name, mem_size);
 
   for (int i = 1; i < jnum; i++) {
@@ -86,16 +86,16 @@ void ***gentrimatrix_p(const char *name, int knum, int jnum, int inum,
   sprintf((char *)ptr_name, "%s ptr", name);
 
   mem_size = knum * sizeof(void **);
-  cudaMallocManaged(&out, mem_size);
+  out = (void ***)malloc(mem_size);
   genmalloc_memory_add(out, ptr_name, mem_size);
 
   mem_size = knum * jnum * sizeof(void *);
-  cudaMallocManaged(&out[0], mem_size);
+  out[0] = (void **)malloc(mem_size);
   genmalloc_memory_add(out[0], ptr_name, mem_size);
 
   mem_size = knum * jnum * inum * elsize;
-  cudaMallocManaged(&out[0][0],
-                    (size_t)knum * (size_t)jnum * (size_t)inum * elsize);
+  out[0][0] =
+      (void *)malloc((size_t)knum * (size_t)jnum * (size_t)inum * elsize);
   genmalloc_memory_add(out[0][0], name, mem_size);
 
   for (int k = 0; k < knum; k++) {
@@ -147,7 +147,7 @@ void genmalloc_memory_remove_p(void *malloc_mem_ptr, const char *file,
         printf("GENMALLOC_MEMORY_REMOVE: DEBUG -- freeing malloc memory "
                "pointer %p\n",
                malloc_mem_ptr);
-      cudaFree(malloc_mem_ptr);
+      free(malloc_mem_ptr);
       free(genmalloc_memory_item->name);
       SLIST_REMOVE(&genmalloc_memory_head, genmalloc_memory_item,
                    genmalloc_memory_entry, genmalloc_memory_entries);
@@ -203,7 +203,7 @@ void genmem_free_all_p(const char *file, const int line) {
     if (DEBUG)
       printf("GENMEM_FREE_ALL: DEBUG -- freeing genmalloc memory %p\n",
              genmalloc_memory_item->mem_ptr);
-    cudaFree(genmalloc_memory_item->mem_ptr);
+    free(genmalloc_memory_item->mem_ptr);
     free(genmalloc_memory_item->name);
     SLIST_REMOVE_HEAD(&genmalloc_memory_head, genmalloc_memory_entries);
     free(genmalloc_memory_item);

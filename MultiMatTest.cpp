@@ -71,7 +71,6 @@ int main(int argc, char **argv) {
   double *cen_y = (double *)genvector("Centroids_y", ncells, sizeof(double));
   get_centroids(cen_x, cen_y);
 
-#if 0
   single_material(ncells, memory_verbose, itermax, nmatconst);
 
   cell_dominant_full_matrix(ncells, memory_verbose, itermax, nmatconst, method,
@@ -85,7 +84,6 @@ int main(int argc, char **argv) {
   cell_dominant_compact(ncells, memory_verbose, itermax, nmatconst, method,
                         nmats, L_f, nnbrs_ave, nmatconsts, cen_x, cen_y, nnbrs,
                         nbrs);
-#endif // if 0
 
   material_centric_compact(ncells, memory_verbose, itermax, nmatconst, method,
                            nmats, L_f, nnbrs_ave, nmatconsts, cen_x, cen_y,

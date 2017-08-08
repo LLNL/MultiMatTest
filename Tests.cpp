@@ -1,7 +1,5 @@
-#include "MultiMatTest.hpp"
-#include "Shared.hpp"
 #include "Tests.hpp"
-#include "Tests.k"
+#include "MultiMatTest.hpp"
 #include "genmalloc.h"
 #include "timer.h"
 #include <stdio.h>
@@ -40,14 +38,15 @@ void single_material(const int ncells, const bool memory_verbose,
   //  Average density with cell densities (pure cells)
   double time_sum = 0.0;
   double density_ave = 0.0;
-  const int nblocks = ceil(ncells / (double)NTHREADS);
   for (int iter = 0; iter < itermax; iter++) {
     cpu_timer_start(&tstart_cpu);
 
-    sm_average_density<<<nblocks, NTHREADS>>>(ncells, Density, Vol,
-                                              ReduceArray);
-    finish_sum_reduce(nblocks, ReduceArray, &density_ave);
-    gpu_check(cudaDeviceSynchronize());
+    double density_ave = 0.0;
+#pragma omp parallel for reduction(+ : density_ave)
+    for (int ic = 0; ic < ncells; ic++) {
+      density_ave += Density[ic] * Vol[ic];
+    }
+
     density_ave /= VolTotal;
 
     time_sum += cpu_timer_stop(tstart_cpu);
@@ -66,15 +65,10 @@ void single_material(const int ncells, const bool memory_verbose,
   for (int iter = 0; iter < itermax; iter++) {
     cpu_timer_start(&tstart_cpu);
 
-    sm_pressure<<<nblocks, NTHREADS>>>(ncells, nmatconst, Density, Temperature,
-                                       Vol, Pressure);
-    gpu_check(cudaDeviceSynchronize());
-
-#if 0
+#pragma omp parallel for
     for (int ic = 0; ic < ncells; ic++) {
       Pressure[ic] = (nmatconst * Density[ic] * Temperature[ic]) / Vol[ic];
     }
-#endif // if 0
 
     time_sum += cpu_timer_stop(tstart_cpu);
   }
@@ -132,26 +126,18 @@ void cell_dominant_full_matrix(const int ncells, const bool memory_verbose,
 
   struct timeval tstart_cpu;
   double time_sum = 0.0;
-  double density_ave = 0.0;
-  const int nblocks = ceil(ncells / (double)NTHREADS);
   for (int iter = 0; iter < itermax; iter++) {
     cpu_timer_start(&tstart_cpu);
 
-    cdfm_average_density<<<nblocks, NTHREADS>>>(ncells, nmats, Density, Vol,
-                                                Densityfrac, Volfrac,
-                                                ReduceArray, Density_average);
-    finish_sum_reduce(nblocks, ReduceArray, &density_ave);
-    gpu_check(cudaDeviceSynchronize());
-
-#if 0
+#pragma omp parallel for
     for (int ic = 0; ic < ncells; ic++) {
-      density_ave = 0.0;
+      double density_ave = 0.0;
+#pragma omp reduction(+ : density_ave)
       for (int m = 0; m < nmats; m++) {
         density_ave += Densityfrac[ic][m] * Volfrac[ic][m];
       }
       Density_average[ic] = density_ave / Vol[ic];
     }
-#endif // if 0
 
     time_sum += cpu_timer_stop(tstart_cpu);
   }
@@ -176,15 +162,10 @@ void cell_dominant_full_matrix(const int ncells, const bool memory_verbose,
   for (int iter = 0; iter < itermax; iter++) {
     cpu_timer_start(&tstart_cpu);
 
-    cdfm_average_density_with_if<<<nblocks, NTHREADS>>>(
-        ncells, nmats, Density, Vol, Densityfrac, Volfrac, ReduceArray,
-        Density_average);
-    finish_sum_reduce(nblocks, ReduceArray, &density_ave);
-    gpu_check(cudaDeviceSynchronize());
-
-#if 0
+#pragma omp parallel for
     for (int ic = 0; ic < ncells; ic++) {
-      density_ave = 0.0;
+      double density_ave = 0.0;
+#pragma omp reduction(+ : density_ave)
       for (int m = 0; m < nmats; m++) {
         if (Volfrac[ic][m] > 0.0) {
           density_ave += Densityfrac[ic][m] * Volfrac[ic][m];
@@ -192,7 +173,6 @@ void cell_dominant_full_matrix(const int ncells, const bool memory_verbose,
       }
       Density_average[ic] = density_ave / Vol[ic];
     }
-#endif // if 0
 
     time_sum += cpu_timer_stop(tstart_cpu);
   }
@@ -213,11 +193,11 @@ void cell_dominant_full_matrix(const int ncells, const bool memory_verbose,
   flops += ncells;                                              // line 8 flops
   float branch_wait = 1.0 / CLOCK_RATE *
                       16; // Estimate a 16 cycle wait for branch misprediction
-                          // for a 2.7 GHz processor
+  // for a 2.7 GHz processor
   float cache_wait =
       1.0 / CLOCK_RATE * 7 *
       16; // Estimate a 7*16 or 112 cycle wait for missing prefetch
-          // for a 2.7 GHz processor
+  // for a 2.7 GHz processor
   penalty_msecs = 1000.0 * cache_miss_freq * (branch_wait + cache_wait) *
                   (filled_fraction * (float)(ncells * nmats)); // line 4 if
   print_performance_estimates(act_perf, memops, 0, flops, penalty_msecs);
@@ -227,24 +207,19 @@ void cell_dominant_full_matrix(const int ncells, const bool memory_verbose,
   for (int iter = 0; iter < itermax; iter++) {
     cpu_timer_start(&tstart_cpu);
 
-    cdfm_pressure<<<nblocks, NTHREADS>>>(ncells, nmats, nmatconsts, Volfrac,
-                                         Pressurefrac, Densityfrac,
-                                         Temperaturefrac);
-    gpu_check(cudaDeviceSynchronize());
-
-#if 0
+#pragma omp parallel for
     for (int ic = 0; ic < ncells; ic++) {
+#pragma omp
       for (int m = 0; m < nmats; m++) {
         if (Volfrac[ic][m] > 0.) {
           Pressurefrac[ic][m] =
-            (nmatconsts[m] * Densityfrac[ic][m] * Temperaturefrac[ic][m]) /
-            (Volfrac[ic][m]);
+              (nmatconsts[m] * Densityfrac[ic][m] * Temperaturefrac[ic][m]) /
+              (Volfrac[ic][m]);
         } else {
           Pressurefrac[ic][m] = 0.0;
         }
       }
     }
-#endif // if 0
 
     time_sum += cpu_timer_stop(tstart_cpu);
   }
@@ -279,30 +254,29 @@ void cell_dominant_full_matrix(const int ncells, const bool memory_verbose,
 
   time_sum = 0;
   for (int iter = 0; iter < itermax; iter++) {
-    cpu_timer_start(&tstart_cpu);
-    cdfm_average_density_neighbourhood<<<nblocks, NTHREADS>>>(
-        ncells, nmats, nnbrs, nbrs, cen_x, cen_y, Volfrac, Densityfrac,
-        MatDensity_average);
-    gpu_check(cudaDeviceSynchronize());
 
-#if 0
+#pragma omp parallel for
     for (int ic = 0; ic < ncells; ic++) {
       double xc[2];
-      xc[0] = cen[ic][0];
-      xc[1] = cen[ic][1];
+      xc[0] = cen_x[ic];
+      xc[1] = cen_y[ic];
       int nn = nnbrs[ic];
       int cnbrs[8];
       double dsqr[8];
+
+#pragma omp
       for (int n = 0; n < nn; n++)
         cnbrs[n] = nbrs[ic][n];
+
+#pragma omp
       for (int n = 0; n < nn; n++) {
         dsqr[n] = 0.0;
         // TODO: Fairly sure this was meant to iterate over both dimensions??
-        for (int d = 0; d < 1; d++) {
-          double ddist = (xc[d] - cen[cnbrs[n]][d]);
-          dsqr[n] += ddist * ddist;
-        }
+        double ddist = (xc[0] - cen_x[cnbrs[n]]);
+        dsqr[n] += ddist * ddist;
       }
+
+#pragma omp
       for (int m = 0; m < nmats; m++) {
         if (Volfrac[ic][m] > 0.0) {
           int nnm = 0; // number of nbrs with this material
@@ -319,7 +293,6 @@ void cell_dominant_full_matrix(const int ncells, const bool memory_verbose,
         }
       }
     }
-#endif // if 0
 
     time_sum += cpu_timer_stop(tstart_cpu);
   }
@@ -391,31 +364,24 @@ void material_dominant_matrix(const int ncells, const bool memory_verbose,
 
   double time_sum = 0;
   struct timeval tstart_cpu;
-  const int nblocks = ceil(ncells * nmats / (double)NTHREADS);
-  const int nblocks_cells = ceil(ncells / (double)NTHREADS);
 
   for (int iter = 0; iter < itermax; iter++) {
     cpu_timer_start(&tstart_cpu);
 
-    mdfm_average_density_zero<<<nblocks_cells, NTHREADS>>>(ncells, nmats,
-                                                           Density_average);
-    mdfm_average_density<<<nblocks, NTHREADS>>>(ncells, nmats, Density_average,
-                                                Densityfrac, Volfrac, Vol);
-    gpu_check(cudaDeviceSynchronize());
-
-#if 0
+#pragma omp parallel for
     for (int ic = 0; ic < ncells; ic++) {
       Density_average[ic] = 0.0;
     }
+#pragma omp parallel for collapse(2)
     for (int m = 0; m < nmats; m++) {
       for (int ic = 0; ic < ncells; ic++) {
         Density_average[ic] += Densityfrac[m][ic] * Volfrac[m][ic];
       }
     }
+#pragma omp parallel for
     for (int ic = 0; ic < ncells; ic++) {
       Density_average[ic] /= Vol[ic];
     }
-#endif // if 0
 
     time_sum += cpu_timer_stop(tstart_cpu);
   }
@@ -443,17 +409,13 @@ void material_dominant_matrix(const int ncells, const bool memory_verbose,
   for (int iter = 0; iter < itermax; iter++) {
     cpu_timer_start(&tstart_cpu);
 
-    mdfm_average_density_zero<<<nblocks_cells, NTHREADS>>>(ncells, nmats,
-                                                           Density_average);
-    mdfm_average_density_with_if<<<nblocks, NTHREADS>>>(
-        ncells, nmats, Density_average, Densityfrac, Volfrac, Vol);
-    gpu_check(cudaDeviceSynchronize());
-
-#if 0
-    // NOTE: Fairly sure this is mean to be Density_average, it was previously Density.
+// NOTE: Fairly sure this is mean to be Density_average, it was previously
+// Density.
+#pragma omp parallel for
     for (int ic = 0; ic < ncells; ic++) {
       Density[ic] = 0.0;
     }
+#pragma omp parallel for collapse(2)
     for (int m = 0; m < nmats; m++) {
       for (int ic = 0; ic < ncells; ic++) {
         if (Volfrac[m][ic] > 0.0) {
@@ -461,7 +423,6 @@ void material_dominant_matrix(const int ncells, const bool memory_verbose,
         }
       }
     }
-#endif // if 0
 
     time_sum += cpu_timer_stop(tstart_cpu);
   }
@@ -499,12 +460,7 @@ void material_dominant_matrix(const int ncells, const bool memory_verbose,
   for (int iter = 0; iter < itermax; iter++) {
     cpu_timer_start(&tstart_cpu);
 
-    mdfm_pressure<<<nblocks, NTHREADS>>>(ncells, nmats, nmatconsts, Volfrac,
-                                         Pressurefrac, Densityfrac,
-                                         Temperaturefrac);
-    gpu_check(cudaDeviceSynchronize());
-
-#if 0
+#pragma omp parallel for collapse(2)
     for (int m = 0; m < nmats; m++) {
       for (int ic = 0; ic < ncells; ic++) {
         if (Volfrac[m][ic] > 0.0) {
@@ -516,7 +472,6 @@ void material_dominant_matrix(const int ncells, const bool memory_verbose,
         }
       }
     }
-#endif // if 0
 
     time_sum += cpu_timer_stop(tstart_cpu);
   }
@@ -554,18 +509,13 @@ void material_dominant_matrix(const int ncells, const bool memory_verbose,
   for (int iter = 0; iter < itermax; iter++) {
     cpu_timer_start(&tstart_cpu);
 
-    mdfm_average_density_neighbourhood<<<nblocks, NTHREADS>>>(
-        ncells, nmats, nnbrs, nbrs, cen_x, cen_y, Volfrac, Densityfrac,
-        MatDensity_average);
-    gpu_check(cudaDeviceSynchronize());
-
-#if 0
+#pragma omp parallel for collapse(2)
     for (int m = 0; m < nmats; m++) {
       for (int ic = 0; ic < ncells; ic++) {
         if (Volfrac[m][ic] > 0.0) {
           double xc[2];
-          xc[0] = cen[ic][0];
-          xc[1] = cen[ic][1];
+          xc[0] = cen_x[ic];
+          xc[1] = cen_y[ic];
           int nn = nnbrs[ic];
           int cnbrs[8];
           double dsqr[8];
@@ -573,11 +523,10 @@ void material_dominant_matrix(const int ncells, const bool memory_verbose,
             cnbrs[n] = nbrs[ic][n];
           for (int n = 0; n < nn; n++) {
             dsqr[n] = 0.0;
-            // TODO: Fairly sure this was meant to iterate over both dimensions??
-            for (int d = 0; d < 1; d++) {
-              double ddist = (xc[d] - cen[cnbrs[n]][d]);
-              dsqr[n] += ddist * ddist;
-            }
+            // TODO: Fairly sure this was meant to iterate over both
+            // dimensions??
+            double ddist = (xc[0] - cen_x[cnbrs[n]]);
+            dsqr[n] += ddist * ddist;
           }
 
           int nnm = 0; // number of nbrs with this material
@@ -594,7 +543,6 @@ void material_dominant_matrix(const int ncells, const bool memory_verbose,
         }
       }
     }
-#endif // if 0
 
     time_sum += cpu_timer_stop(tstart_cpu);
   }
@@ -658,6 +606,7 @@ void cell_dominant_compact(const int ncells, const bool memory_verbose,
   int nmixlength = 0;
   int pure_cell_count = 0;
   int mixed_cell_count = 0;
+
   for (int ic = 0; ic < ncells; ic++) {
     int ix = imaterial[ic];
     if (ix <= 0) {
@@ -681,15 +630,10 @@ void cell_dominant_compact(const int ncells, const bool memory_verbose,
   //    Average density with fractional densities
   double time_sum = 0;
   struct timeval tstart_cpu;
-  const int nblocks = ceil(ncells / (double)NTHREADS);
   for (int iter = 0; iter < itermax; iter++) {
     cpu_timer_start(&tstart_cpu);
 
-    ccc_average_density<<<nblocks, NTHREADS>>>(
-        ncells, imaterial, nextfrac, Densityfrac, Volfrac, Density, Vol);
-    gpu_check(cudaDeviceSynchronize());
-
-#if 0
+#pragma omp parallel for
     for (int ic = 0; ic < ncells; ic++) {
       double density_ave = 0.0;
       int ix = imaterial[ic];
@@ -700,7 +644,6 @@ void cell_dominant_compact(const int ncells, const bool memory_verbose,
         Density[ic] = density_ave / Vol[ic];
       }
     }
-#endif // if 0
 
     time_sum += cpu_timer_stop(tstart_cpu);
   }
@@ -729,13 +672,9 @@ void cell_dominant_compact(const int ncells, const bool memory_verbose,
   for (int iter = 0; iter < itermax; iter++) {
     cpu_timer_start(&tstart_cpu);
 
-    ccc_average_density_using_nmats<<<nblocks, NTHREADS>>>(
-        ncells, imaterial, nmaterials, Densityfrac, Volfrac, Density, Vol);
-    gpu_check(cudaDeviceSynchronize());
-
-#if 0
+#pragma omp parallel for
     for (int ic = 0; ic < ncells; ic++) {
-      density_ave = 0.0;
+      double density_ave = 0.0;
       int mstart = imaterial[ic];
       if (mstart <= 0) { // material numbers for clean cells start at 1
         mstart = -mstart;
@@ -745,7 +684,6 @@ void cell_dominant_compact(const int ncells, const bool memory_verbose,
         Density[ic] = density_ave / Vol[ic];
       }
     }
-#endif // if 0
 
     time_sum += cpu_timer_stop(tstart_cpu);
   }
@@ -776,14 +714,8 @@ void cell_dominant_compact(const int ncells, const bool memory_verbose,
   for (int iter = 0; iter < itermax; iter++) {
     cpu_timer_start(&tstart_cpu);
 
-    ccc_average_density_with_fractional<<<nblocks, NTHREADS>>>(
-        ncells, imaterial, nextfrac, Density, Densityfrac, Volfrac,
-        Density_average, Vol);
-    gpu_check(cudaDeviceSynchronize());
-
-#if 0
     for (int ic = 0; ic < ncells; ic++) {
-      density_ave = 0.0;
+      double density_ave = 0.0;
       int ix = imaterial[ic];
       if (ix <= 0) { // material numbers for clean cells start at 1
         for (ix = -ix; ix >= 0; ix = nextfrac[ix]) {
@@ -794,7 +726,6 @@ void cell_dominant_compact(const int ncells, const bool memory_verbose,
         Density_average[ic] = Density[ic];
       }
     }
-#endif // if 0
 
     time_sum += cpu_timer_stop(tstart_cpu);
   }
@@ -829,16 +760,11 @@ void cell_dominant_compact(const int ncells, const bool memory_verbose,
   for (int iter = 0; iter < itermax; iter++) {
     cpu_timer_start(&tstart_cpu);
 
-    ccc_average_density_with_pure<<<nblocks, NTHREADS>>>(
-        ncells, imaterial, nextfrac, Density, Densityfrac, Volfrac,
-        Density_average, Vol);
-    gpu_check(cudaDeviceSynchronize());
-
-#if 0
+#pragma omp parallel for
     for (int ic = 0; ic < ncells; ic++) {
       int ix = imaterial[ic];
+      double density_ave = 0.0;
       if (ix <= 0) { // material numbers for clean cells start at 1
-        density_ave = 0.0;
         for (ix = -ix; ix >= 0; ix = nextfrac[ix]) {
           density_ave += Densityfrac[ix] * Volfrac[ix];
         }
@@ -847,7 +773,6 @@ void cell_dominant_compact(const int ncells, const bool memory_verbose,
       }
       Density_average[ic] = density_ave / Vol[ic];
     }
-#endif // if 0
 
     time_sum += cpu_timer_stop(tstart_cpu);
   }
@@ -880,13 +805,7 @@ void cell_dominant_compact(const int ncells, const bool memory_verbose,
   for (int iter = 0; iter < itermax; iter++) {
     cpu_timer_start(&tstart_cpu);
 
-    ccc_pressure<<<nblocks, NTHREADS>>>(ncells, nmatconsts, imaterial, nextfrac,
-                                        imaterialfrac, Density, Densityfrac,
-                                        Volfrac, Pressurefrac, Pressure, Vol,
-                                        Temperaturefrac, Temperature);
-    gpu_check(cudaDeviceSynchronize());
-
-#if 0
+#pragma omp parallel for
     for (int ic = 0; ic < ncells; ic++) {
       int ix = imaterial[ic];
       if (ix <= 0) { // material numbers for clean cells start at 1
@@ -900,7 +819,6 @@ void cell_dominant_compact(const int ncells, const bool memory_verbose,
         Pressure[ic] = nmatconsts[ix] * Density[ic] * Temperature[ic] / Vol[ic];
       }
     }
-#endif // if 0
 
     time_sum += cpu_timer_stop(tstart_cpu);
   }
@@ -930,26 +848,17 @@ void cell_dominant_compact(const int ncells, const bool memory_verbose,
       (double **)genmatrix("MatDensity_average", ncells, nmats, sizeof(double));
 
   time_sum = 0;
-  const int nblocks_mats = ceil(ncells * nmats / (double)NTHREADS);
   for (int iter = 0; iter < itermax; iter++) {
     cpu_timer_start(&tstart_cpu);
 
-    ccc_mat_density_zero<<<nblocks_mats, NTHREADS>>>(ncells, nmats,
-                                                     MatDensity_average);
-
-    ccc_average_mat_density_neighbourhood<<<nblocks, NTHREADS>>>(
-        ncells, nmats, imaterial, imaterialfrac, nextfrac, nnbrs, nbrs, cen_x,
-        cen_y, Volfrac, Densityfrac, MatDensity_average);
-    gpu_check(cudaDeviceSynchronize());
-
-#if 0
+#pragma omp parallel for
     for (int ic = 0; ic < ncells; ic++) {
       for (int m = 0; m < nmats; m++)
         MatDensity_average[ic][m] = 0.0;
 
       double xc[2];
-      xc[0] = cen[ic][0];
-      xc[1] = cen[ic][1];
+      xc[0] = cen_x[ic];
+      xc[1] = cen_y[ic];
       int nn = nnbrs[ic];
       int cnbrs[8];
       double dsqr[8];
@@ -957,10 +866,8 @@ void cell_dominant_compact(const int ncells, const bool memory_verbose,
         cnbrs[n] = nbrs[ic][n];
       for (int n = 0; n < nn; n++) {
         dsqr[n] = 0.0;
-        for (int d = 0; d < 1; d++) {
-          double ddist = (xc[d] - cen[cnbrs[n]][d]);
-          dsqr[n] += ddist * ddist;
-        }
+        double ddist = (xc[0] - cen_x[cnbrs[n]]);
+        dsqr[n] += ddist * ddist;
       }
 
       int ix = imaterial[ic];
@@ -1016,7 +923,6 @@ void cell_dominant_compact(const int ncells, const bool memory_verbose,
         MatDensity_average[ic][m] /= nnm;
       }
     }
-#endif // if 0
 
     time_sum += cpu_timer_stop(tstart_cpu);
   }
@@ -1100,25 +1006,14 @@ void material_centric_compact(const int ncells, const bool memory_verbose,
   //    Average density with fractional densities - MAT-DOMINANT LOOP
   double time_sum = 0;
   struct timeval tstart_cpu;
-  const int nblocks_cells = ceil(ncells / (double)NTHREADS);
   for (int iter = 0; iter < itermax; iter++) {
     cpu_timer_start(&tstart_cpu);
 
-    mcc_average_density_zero<<<nblocks_cells, NTHREADS>>>(ncells, Density);
-    gpu_check(cudaDeviceSynchronize());
-
-    for (int m = 0; m < nmats; m++) {
-      const int ncm = ncellsmat[m];
-      const int nblocks = ceil(ncm / (double)NTHREADS);
-      mcc_average_density_by_material<<<nblocks, NTHREADS>>>(
-          ncm, m, subset2mesh, Densityfrac, Volfrac, Density);
-      gpu_check(cudaDeviceSynchronize());
-    }
-
-#if 0
+#pragma omp parallel for
     for (int C = 0; C < ncells; C++)
       Density[C] = 0.0;
 
+#pragma omp parallel for
     for (int m = 0; m < nmats; m++) {
       for (int c = 0; c < ncellsmat[m]; c++) { // Note that this is c not C
         int C = subset2mesh[m][c];
@@ -1126,9 +1021,9 @@ void material_centric_compact(const int ncells, const bool memory_verbose,
       }
     }
 
+#pragma omp parallel for
     for (int C = 0; C < ncells; C++)
       Density[C] /= Vol[C];
-#endif // if 0
 
     time_sum += cpu_timer_stop(tstart_cpu);
   }
@@ -1161,12 +1056,7 @@ void material_centric_compact(const int ncells, const bool memory_verbose,
   for (int iter = 0; iter < itermax; iter++) {
     cpu_timer_start(&tstart_cpu);
 
-    mcc_average_density_by_cell<<<nblocks_cells, NTHREADS>>>(
-        ncells, matids, mesh2subset, nmatscell, Densityfrac, Volfrac, Density,
-        Vol);
-    gpu_check(cudaDeviceSynchronize());
-
-#if 0
+#pragma omp parallel for
     for (int C = 0; C < ncells; C++) {
       double density_ave = 0.0;
       for (int im = 0; im < nmatscell[C]; im++) {
@@ -1176,7 +1066,6 @@ void material_centric_compact(const int ncells, const bool memory_verbose,
       }
       Density[C] = density_ave / Vol[C];
     }
-#endif // if 0
 
     time_sum += cpu_timer_stop(tstart_cpu);
   }
@@ -1211,25 +1100,14 @@ void material_centric_compact(const int ncells, const bool memory_verbose,
   for (int iter = 0; iter < itermax; iter++) {
     cpu_timer_start(&tstart_cpu);
 
+#pragma omp parallel for collapse(2)
     for (int m = 0; m < nmats; m++) {
-      const int ncm = ncellsmat[m];
-      const int nblocks = ceil(ncm / (double)NTHREADS);
-      mcc_pressure_by_material<<<nblocks, NTHREADS>>>(ncm, m, nmatconst,
-                                                      Pressurefrac, Densityfrac,
-                                                      Temperaturefrac, Volfrac);
-      gpu_check(cudaDeviceSynchronize());
-    }
-
-#if 0
-    for (int m = 0; m < nmats; m++) {
-      double matconst = nmatconsts[m];
       for (int c = 0; c < ncellsmat[m]; c++) {
         Pressurefrac[m][c] =
-            (matconst * Densityfrac[m][c] * Temperaturefrac[m][c]) /
+            (nmatconsts[m] * Densityfrac[m][c] * Temperaturefrac[m][c]) /
             Volfrac[m][c];
       }
     }
-#endif // if 0
 
     time_sum += cpu_timer_stop(tstart_cpu);
   }
@@ -1260,56 +1138,41 @@ void material_centric_compact(const int ncells, const bool memory_verbose,
   for (int iter = 0; iter < itermax; iter++) {
     cpu_timer_start(&tstart_cpu);
 
-    const int nblocks_cellsmats = ceil(ncells * nmats / (double)NTHREADS);
-    mcc_mat_density_zero<<<nblocks_cellsmats, NTHREADS>>>(ncells, nmats,
-                                                          MatDensity_average);
-    gpu_check(cudaDeviceSynchronize());
-
     for (int m = 0; m < nmats; m++) {
-      const int ncm = ncellsmat[m];
-      const int nblocks = ceil(ncm / (double)NTHREADS);
-      mcc_average_density_by_neighbourhood<<<nblocks, NTHREADS>>>(
-          ncm, m, subset2mesh, mesh2subset, cen_x, cen_y, nnbrs, nbrs,
-          MatDensity_average, Densityfrac);
-      gpu_check(cudaDeviceSynchronize());
-    }
-
-#if 0
-    for (int m = 0; m < nmats; m++) {
+#pragma omp parallel for
       for (int C = 0; C < ncells; C++)
         MatDensity_average[m][C] = 0.0;
 
-          for (int c = 0; c < ncellsmat[m]; c++) { // Note that this is c not C
-            int C = subset2mesh[m][c];
-            double xc[2];
-            xc[0] = cen[C][0];
-            xc[1] = cen[C][1];
-            int nn = nnbrs[C];
-            int cnbrs[9];
-            double dsqr[8];
-            for (int n = 0; n < nn; n++)
-              cnbrs[n] = nbrs[C][n];
-            for (int n = 0; n < nn; n++) {
-              dsqr[n] = 0.0;
-              for (int d = 0; d < 1; d++) {
-                double ddist = (xc[d] - cen[cnbrs[n]][d]);
-                dsqr[n] += ddist * ddist;
-              }
-            }
+#pragma omp parallel for
+      for (int c = 0; c < ncellsmat[m]; c++) { // Note that this is c not C
+        int C = subset2mesh[m][c];
+        double xc[2];
+        xc[0] = cen_x[C];
+        xc[1] = cen_y[C];
+        int nn = nnbrs[C];
+        int cnbrs[9];
+        double dsqr[8];
+        for (int n = 0; n < nn; n++)
+          cnbrs[n] = nbrs[C][n];
+        for (int n = 0; n < nn; n++) {
+          dsqr[n] = 0.0;
+          double ddist = (xc[0] - cen_x[cnbrs[n]]);
+          dsqr[n] += ddist * ddist;
+        }
 
-            int nnm = 0; // number of nbrs with this material
-            for (int n = 0; n < nn; n++) {
-              int C_j = cnbrs[n];
-              int c_j = mesh2subset[m][C_j];
-              if (c_j >= 0) {
-                MatDensity_average[m][C] += Densityfrac[m][c_j] / dsqr[n];
-                nnm++;
-              }
-            }
-            MatDensity_average[m][C] /= nnm;
+        int nnm = 0; // number of nbrs with this material
+#pragma omp parallel for
+        for (int n = 0; n < nn; n++) {
+          int C_j = cnbrs[n];
+          int c_j = mesh2subset[m][C_j];
+          if (c_j >= 0) {
+            MatDensity_average[m][C] += Densityfrac[m][c_j] / dsqr[n];
+            nnm++;
           }
+        }
+        MatDensity_average[m][C] /= nnm;
+      }
     }
-#endif // if 0
 
     time_sum += cpu_timer_stop(tstart_cpu);
   }
@@ -1447,15 +1310,4 @@ void material_centric_compact(const int ncells, const bool memory_verbose,
   genvectorfree((void *)Pressurefrac);
   genvectorfree((void *)subset2mesh);
   genmatrixfree((void **)mesh2subset);
-}
-
-void finish_sum_reduce(int nblocks1, double *reduce_array, double *result) {
-  while (nblocks1 > 1) {
-    int nblocks0 = nblocks1;
-    nblocks1 = max(1, (int)ceil(nblocks1 / (double)NTHREADS));
-    sum_reduce<double, NTHREADS>
-        <<<nblocks1, NTHREADS>>>(reduce_array, reduce_array, nblocks0);
-  }
-  gpu_check(cudaDeviceSynchronize());
-  cudaMemcpy(&result, &reduce_array, 1, cudaMemcpyDeviceToHost);
 }

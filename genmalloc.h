@@ -14,6 +14,8 @@
  * Bob Robey brobey@lanl.gov and Rao Garimella rao@lanl.gov
  */
 
+#include <stdio.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
