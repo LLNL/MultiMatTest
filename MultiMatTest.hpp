@@ -6,7 +6,7 @@
 #define STREAM_RATE 13375; // MB/sec
 
 void get_neighbors(int ncells, int *&num_nbrs, int **&nbrs);
-void get_centroids(double (*&cen)[2]);
+void get_centroids(double *cen_x, double *cen_y);
 void get_vol_frac_matrix_rand(double **&Volfrac, float &filled_percentage);
 void get_vol_frac_matrix_file(double **&Volfrac, float &filled_percentage);
 void get_vol_frac_matrix(int method, double **&Volfrac,

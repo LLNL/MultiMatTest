@@ -280,6 +280,10 @@ void cell_dominant_full_matrix(const int ncells, const bool memory_verbose,
   time_sum = 0;
   for (int iter = 0; iter < itermax; iter++) {
     cpu_timer_start(&tstart_cpu);
+    cdfm_average_density_neighbourhood<<<nblocks, NTHREADS>>>(
+        ncells, nmats, nnbrs, nbrs, cen_x, cen_y, Volfrac, Densityfrac,
+        MatDensity_average);
+    gpu_check(cudaDeviceSynchronize());
 
 #if 0
     for (int ic = 0; ic < ncells; ic++) {
@@ -522,6 +526,7 @@ void material_dominant_matrix(const int ncells, const bool memory_verbose,
   for (int iter = 0; iter < itermax; iter++) {
     cpu_timer_start(&tstart_cpu);
 
+#if 0
     for (int m = 0; m < nmats; m++) {
       for (int ic = 0; ic < ncells; ic++) {
         if (Volfrac[m][ic] > 0.0) {
@@ -555,6 +560,7 @@ void material_dominant_matrix(const int ncells, const bool memory_verbose,
         }
       }
     }
+#endif // if 0
 
     time_sum += cpu_timer_stop(tstart_cpu);
   }
@@ -863,6 +869,7 @@ void cell_dominant_compact(const int ncells, const bool memory_verbose,
       for (int m = 0; m < nmats; m++)
         MatDensity_average[ic][m] = 0.0;
 
+#if 0
       double xc[2];
       xc[0] = cen[ic][0];
       xc[1] = cen[ic][1];
@@ -931,6 +938,7 @@ void cell_dominant_compact(const int ncells, const bool memory_verbose,
         }
         MatDensity_average[ic][m] /= nnm;
       }
+#endif // if 0
     }
 
     time_sum += cpu_timer_stop(tstart_cpu);
@@ -1147,6 +1155,7 @@ void material_dominant_compact(const int ncells, const bool memory_verbose,
       for (int C = 0; C < ncells; C++)
         MatDensity_average[m][C] = 0.0;
 
+#if 0
       for (int c = 0; c < ncellsmat[m]; c++) { // Note that this is c not C
         int C = subset2mesh[m][c];
         double xc[2];
@@ -1176,6 +1185,7 @@ void material_dominant_compact(const int ncells, const bool memory_verbose,
         }
         MatDensity_average[m][C] /= nnm;
       }
+#endif // if 0
     }
 
     time_sum += cpu_timer_stop(tstart_cpu);
