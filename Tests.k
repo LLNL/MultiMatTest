@@ -245,7 +245,7 @@ __global__ void mdfm_average_density_neighbourhood(
   }
 }
 
-__global__ void cdc_average_density(
+__global__ void ccc_average_density(
     const int ncells, const int* imaterial, const int* nextfrac, double* Densityfrac, double* Volfrac, double* Density, double* Vol)
 {
   const int ic = blockIdx.x*blockDim.x+threadIdx.x;
@@ -265,7 +265,7 @@ __global__ void cdc_average_density(
   }
 }
 
-__global__ void cdc_average_density_using_nmats(
+__global__ void ccc_average_density_using_nmats(
     const int ncells, const int* imaterial, const int* nmaterials, double* Densityfrac, double* Volfrac, double* Density, double* Vol)
 {
   const int ic = blockIdx.x*blockDim.x+threadIdx.x;
@@ -285,7 +285,7 @@ __global__ void cdc_average_density_using_nmats(
   }
 }
 
-__global__ void cdc_average_density_with_fractional(
+__global__ void ccc_average_density_with_fractional(
     const int ncells, const int* imaterial, const int* nextfrac, double* Density, double* Densityfrac, double* Volfrac, double* Density_average, double* Vol)
 {
   const int ic = blockIdx.x*blockDim.x+threadIdx.x;
@@ -306,7 +306,7 @@ __global__ void cdc_average_density_with_fractional(
   }
 }
 
-__global__ void cdc_average_density_with_pure(
+__global__ void ccc_average_density_with_pure(
     const int ncells, const int* imaterial, const int* nextfrac, double* Density, double* Densityfrac, double* Volfrac, double* Density_average, double* Vol)
 {
   const int ic = blockIdx.x*blockDim.x+threadIdx.x;
@@ -327,7 +327,7 @@ __global__ void cdc_average_density_with_pure(
   Density_average[ic] = density_ave / Vol[ic];
 }
 
-__global__ void cdc_pressure(
+__global__ void ccc_pressure(
     const int ncells, const double* nmatconsts, const int* imaterial, const int* nextfrac, const int* imaterialfrac, double* Density, double* Densityfrac, 
     double* Volfrac, double* Pressurefrac, double* Pressure, double* Vol, double* Temperaturefrac, double* Temperature)
 {
@@ -350,7 +350,7 @@ __global__ void cdc_pressure(
   }
 }
 
-__global__ void cdc_mat_density_zero(
+__global__ void ccc_mat_density_zero(
     const int ncells, const int nmats, double** MatDensity_average)
 {
   const int gid = blockIdx.x*blockDim.x+threadIdx.x;
@@ -364,7 +364,7 @@ __global__ void cdc_mat_density_zero(
   MatDensity_average[ic][m] = 0.0;
 }
 
-__global__ void cdc_average_mat_density_neighbourhood(
+__global__ void ccc_average_mat_density_neighbourhood(
     const int ncells, const int nmats, const int* imaterial, const int* imaterialfrac, const int* nextfrac, const int* nnbrs, int** nbrs, const double* cen_x, const double* cen_y, double* Volfrac, double* Densityfrac, double** MatDensity_average)
 {
   const int ic = blockIdx.x*blockDim.x+threadIdx.x;
@@ -441,7 +441,7 @@ __global__ void cdc_average_mat_density_neighbourhood(
   }
 }
 
-__global__ void mdc_average_density_zero(
+__global__ void mcc_average_density_zero(
     const int ncells, double* Density)
 {
   const int C = blockIdx.x*blockDim.x+threadIdx.x;
@@ -453,7 +453,7 @@ __global__ void mdc_average_density_zero(
   Density[C] = 0.0;
 }
 
-__global__ void mdc_average_density(
+__global__ void mcc_average_density_by_material(
     const int ncm, const int m, int** subset2mesh, double** Densityfrac,
     double** Volfrac, double* Density)
 {
@@ -467,3 +467,103 @@ __global__ void mdc_average_density(
   Density[C] += Densityfrac[m][c] * Volfrac[m][c];
 }
 
+__global__ void mcc_average_density_by_cell(
+    const int ncells, const int* matids, int** mesh2subset, int* nmatscell, double** Densityfrac, double** Volfrac, double* Density, double* Vol)
+{
+  const int C = blockIdx.x*blockDim.x+threadIdx.x;
+
+  if(C >= ncells) {
+    return;
+  }
+
+  double density_ave = 0.0;
+  for (int im = 0; im < nmatscell[C]; im++) {
+    int m = matids[4 * C + im];
+    int c = mesh2subset[m][C];
+    density_ave += Densityfrac[m][c] * Volfrac[m][c];
+  }
+  Density[C] = density_ave / Vol[C];
+}
+
+__global__ void mcc_average_density_by_matrix(
+    const int ncells, const int* matids, int** mesh2subset, int* nmatscell, double** Densityfrac, double** Volfrac, double* Density, double* Vol)
+{
+  const int C = blockIdx.x*blockDim.x+threadIdx.x;
+
+  if(C >= ncells) {
+    return;
+  }
+
+  double density_ave = 0.0;
+  for (int im = 0; im < nmatscell[C]; im++) {
+    int m = matids[4 * C + im];
+    int c = mesh2subset[m][C];
+    density_ave += Densityfrac[m][c] * Volfrac[m][c];
+  }
+  Density[C] = density_ave / Vol[C];
+}
+
+__global__ void mcc_pressure_by_material(
+    const int ncm, const int m, const double nmatconst, double** Pressurefrac, double** Densityfrac, double** Temperaturefrac, double** Volfrac)
+{
+  const int c = blockIdx.x*blockDim.x+threadIdx.x;
+
+  if(c >= ncm) {
+    return;
+  }
+
+  Pressurefrac[m][c] =
+    (nmatconst * Densityfrac[m][c] * Temperaturefrac[m][c]) /
+    Volfrac[m][c];
+}
+
+__global__ void mcc_average_density_by_neighbourhood(
+    const int ncm, const int m, int** subset2mesh, int** mesh2subset, const double* cen_x, const double* cen_y, const int* nnbrs, int** nbrs, double** MatDensity_average, double** Densityfrac)
+{
+  const int c = blockIdx.x*blockDim.x+threadIdx.x;
+
+  if(c >= ncm) {
+    return;
+  }
+
+  int C = subset2mesh[m][c];
+  double xc[2];
+  xc[0] = cen_x[C];
+  xc[1] = cen_y[C];
+  int nn = nnbrs[C];
+  int cnbrs[9];
+  double dsqr[8];
+  for (int n = 0; n < nn; n++)
+    cnbrs[n] = nbrs[C][n];
+  for (int n = 0; n < nn; n++) {
+    dsqr[n] = 0.0;
+    // TODO: Another case where both dimensions were probably intended to be used
+    double ddist = (xc[0] - cen_x[cnbrs[n]]);
+    dsqr[n] += ddist * ddist;
+  }
+
+  int nnm = 0; // number of nbrs with this material
+  for (int n = 0; n < nn; n++) {
+    int C_j = cnbrs[n];
+    int c_j = mesh2subset[m][C_j];
+    if (c_j >= 0) {
+      MatDensity_average[m][C] += Densityfrac[m][c_j] / dsqr[n];
+      nnm++;
+    }
+  }
+  MatDensity_average[m][C] /= nnm;
+}
+
+__global__ void mcc_mat_density_zero(
+    const int ncells, const int nmats, double** MatDensity_average)
+{
+  const int gid = blockIdx.x*blockDim.x+threadIdx.x;
+  const int m = gid / ncells;
+  const int C = gid % ncells; 
+
+  if(gid >= ncells*nmats) {
+    return;
+  }
+
+  MatDensity_average[m][C] = 0.0;
+}

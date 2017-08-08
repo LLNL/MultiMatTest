@@ -87,9 +87,9 @@ int main(int argc, char **argv) {
                         nbrs);
 #endif // if 0
 
-  material_dominant_compact(ncells, memory_verbose, itermax, nmatconst, method,
-                            nmats, L_f, nnbrs_ave, nmatconsts, cen_x, cen_y,
-                            nnbrs, nbrs);
+  material_centric_compact(ncells, memory_verbose, itermax, nmatconst, method,
+                           nmats, L_f, nnbrs_ave, nmatconsts, cen_x, cen_y,
+                           nnbrs, nbrs);
 
   int *Cimaterial, *Cnmaterials, *Cimaterialfrac, *Cnextfrac, *Cfrac2cell;
   double *CVol, *CDensity, *CTemperature, *CPressure, *CVolfrac, *CDensityfrac,
