@@ -1100,21 +1100,35 @@ void material_dominant_compact(const int ncells, const bool memory_verbose,
   //    Average density with fractional densities - MAT-DOMINANT LOOP
   double time_sum = 0;
   struct timeval tstart_cpu;
+  const int nblocks_cells = ceil(ncells / (double)NTHREADS);
   for (int iter = 0; iter < itermax; iter++) {
     cpu_timer_start(&tstart_cpu);
 
-    for (int C = 0; C < ncells; C++)
-      Density[C] = 0.0;
+    mdc_average_density_zero<<<nblocks_cells, NTHREADS>>>(ncells, Density);
+    gpu_check(cudaDeviceSynchronize());
 
     for (int m = 0; m < nmats; m++) {
-      for (int c = 0; c < ncellsmat[m]; c++) { // Note that this is c not C
-        int C = subset2mesh[m][c];
-        Density[C] += Densityfrac[m][c] * Volfrac[m][c];
-      }
+      const int ncm = ncellsmat[m];
+      const int nblocks = ceil(ncm / (double)NTHREADS);
+      mdc_average_density<<<nblocks, NTHREADS>>>(ncm, m, subset2mesh,
+                                                 Densityfrac, Volfrac, Density);
+      gpu_check(cudaDeviceSynchronize());
     }
 
-    for (int C = 0; C < ncells; C++)
-      Density[C] /= Vol[C];
+#if 0
+      for (int C = 0; C < ncells; C++)
+      Density[C] = 0.0;
+
+      for (int m = 0; m < nmats; m++) {
+      for (int c = 0; c < ncellsmat[m]; c++) { // Note that this is c not C
+      int C = subset2mesh[m][c];
+      Density[C] += Densityfrac[m][c] * Volfrac[m][c];
+      }
+      }
+
+      for (int C = 0; C < ncells; C++)
+        Density[C] /= Vol[C];
+#endif // if 0
 
     time_sum += cpu_timer_stop(tstart_cpu);
   }
@@ -1233,35 +1247,35 @@ void material_dominant_compact(const int ncells, const bool memory_verbose,
         MatDensity_average[m][C] = 0.0;
 
 #if 0
-      for (int c = 0; c < ncellsmat[m]; c++) { // Note that this is c not C
-        int C = subset2mesh[m][c];
-        double xc[2];
-        xc[0] = cen[C][0];
-        xc[1] = cen[C][1];
-        int nn = nnbrs[C];
-        int cnbrs[9];
-        double dsqr[8];
-        for (int n = 0; n < nn; n++)
-          cnbrs[n] = nbrs[C][n];
-        for (int n = 0; n < nn; n++) {
-          dsqr[n] = 0.0;
-          for (int d = 0; d < 1; d++) {
-            double ddist = (xc[d] - cen[cnbrs[n]][d]);
-            dsqr[n] += ddist * ddist;
-          }
-        }
+          for (int c = 0; c < ncellsmat[m]; c++) { // Note that this is c not C
+            int C = subset2mesh[m][c];
+            double xc[2];
+            xc[0] = cen[C][0];
+            xc[1] = cen[C][1];
+            int nn = nnbrs[C];
+            int cnbrs[9];
+            double dsqr[8];
+            for (int n = 0; n < nn; n++)
+              cnbrs[n] = nbrs[C][n];
+            for (int n = 0; n < nn; n++) {
+              dsqr[n] = 0.0;
+              for (int d = 0; d < 1; d++) {
+                double ddist = (xc[d] - cen[cnbrs[n]][d]);
+                dsqr[n] += ddist * ddist;
+              }
+            }
 
-        int nnm = 0; // number of nbrs with this material
-        for (int n = 0; n < nn; n++) {
-          int C_j = cnbrs[n];
-          int c_j = mesh2subset[m][C_j];
-          if (c_j >= 0) {
-            MatDensity_average[m][C] += Densityfrac[m][c_j] / dsqr[n];
-            nnm++;
+            int nnm = 0; // number of nbrs with this material
+            for (int n = 0; n < nn; n++) {
+              int C_j = cnbrs[n];
+              int c_j = mesh2subset[m][C_j];
+              if (c_j >= 0) {
+                MatDensity_average[m][C] += Densityfrac[m][c_j] / dsqr[n];
+                nnm++;
+              }
+            }
+            MatDensity_average[m][C] /= nnm;
           }
-        }
-        MatDensity_average[m][C] /= nnm;
-      }
 #endif // if 0
     }
 

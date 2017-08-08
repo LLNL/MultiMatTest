@@ -81,11 +81,11 @@ int main(int argc, char **argv) {
   material_dominant_matrix(ncells, memory_verbose, itermax, nmatconst, method,
                            nmats, L_f, nnbrs_ave, nmatconsts, cen_x, cen_y,
                            nnbrs, nbrs);
-#endif // if 0
 
   cell_dominant_compact(ncells, memory_verbose, itermax, nmatconst, method,
                         nmats, L_f, nnbrs_ave, nmatconsts, cen_x, cen_y, nnbrs,
                         nbrs);
+#endif // if 0
 
   material_dominant_compact(ncells, memory_verbose, itermax, nmatconst, method,
                             nmats, L_f, nnbrs_ave, nmatconsts, cen_x, cen_y,

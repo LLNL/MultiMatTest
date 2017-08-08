@@ -441,3 +441,29 @@ __global__ void cdc_average_mat_density_neighbourhood(
   }
 }
 
+__global__ void mdc_average_density_zero(
+    const int ncells, double* Density)
+{
+  const int C = blockIdx.x*blockDim.x+threadIdx.x;
+
+  if(C >= ncells) {
+    return;
+  }
+
+  Density[C] = 0.0;
+}
+
+__global__ void mdc_average_density(
+    const int ncm, const int m, int** subset2mesh, double** Densityfrac,
+    double** Volfrac, double* Density)
+{
+  const int c = blockIdx.x*blockDim.x+threadIdx.x;
+
+  if(c >= ncm) {
+    return;
+  }
+
+  int C = subset2mesh[m][c];
+  Density[C] += Densityfrac[m][c] * Volfrac[m][c];
+}
+
