@@ -16,8 +16,6 @@ void single_material(const int ncells, const bool memory_verbose,
       (double *)genvector("Temperature", ncells, sizeof(double));
   double *Pressure = (double *)genvector("Pressure", ncells, sizeof(double));
   double *Vol = (double *)genvector("Volume", ncells, sizeof(double));
-  double *ReduceArray =
-      (double *)genvector("reduce_array", ncells, sizeof(double));
 
   double VolTotal = 0.0;
   for (int ic = 0; ic < ncells; ic++) {
@@ -121,8 +119,6 @@ void cell_dominant_full_matrix(const int ncells, const bool memory_verbose,
   //    Average density with fractional densities
   double *Density_average =
       (double *)genvector("Density_average", ncells, sizeof(double));
-  double *ReduceArray =
-      (double *)genvector("ReduceArray", ncells, sizeof(double));
 
   struct timeval tstart_cpu;
   double time_sum = 0.0;
@@ -132,7 +128,6 @@ void cell_dominant_full_matrix(const int ncells, const bool memory_verbose,
 #pragma omp parallel for
     for (int ic = 0; ic < ncells; ic++) {
       double density_ave = 0.0;
-#pragma omp reduction(+ : density_ave)
       for (int m = 0; m < nmats; m++) {
         density_ave += Densityfrac[ic][m] * Volfrac[ic][m];
       }
@@ -165,7 +160,6 @@ void cell_dominant_full_matrix(const int ncells, const bool memory_verbose,
 #pragma omp parallel for
     for (int ic = 0; ic < ncells; ic++) {
       double density_ave = 0.0;
-#pragma omp reduction(+ : density_ave)
       for (int m = 0; m < nmats; m++) {
         if (Volfrac[ic][m] > 0.0) {
           density_ave += Densityfrac[ic][m] * Volfrac[ic][m];
@@ -209,7 +203,6 @@ void cell_dominant_full_matrix(const int ncells, const bool memory_verbose,
 
 #pragma omp parallel for
     for (int ic = 0; ic < ncells; ic++) {
-#pragma omp
       for (int m = 0; m < nmats; m++) {
         if (Volfrac[ic][m] > 0.) {
           Pressurefrac[ic][m] =
@@ -264,11 +257,9 @@ void cell_dominant_full_matrix(const int ncells, const bool memory_verbose,
       int cnbrs[8];
       double dsqr[8];
 
-#pragma omp
       for (int n = 0; n < nn; n++)
         cnbrs[n] = nbrs[ic][n];
 
-#pragma omp
       for (int n = 0; n < nn; n++) {
         dsqr[n] = 0.0;
         // TODO: Fairly sure this was meant to iterate over both dimensions??
@@ -276,7 +267,6 @@ void cell_dominant_full_matrix(const int ncells, const bool memory_verbose,
         dsqr[n] += ddist * ddist;
       }
 
-#pragma omp
       for (int m = 0; m < nmats; m++) {
         if (Volfrac[ic][m] > 0.0) {
           int nnm = 0; // number of nbrs with this material
@@ -372,8 +362,8 @@ void material_dominant_matrix(const int ncells, const bool memory_verbose,
     for (int ic = 0; ic < ncells; ic++) {
       Density_average[ic] = 0.0;
     }
-#pragma omp parallel for collapse(2)
     for (int m = 0; m < nmats; m++) {
+#pragma omp parallel for
       for (int ic = 0; ic < ncells; ic++) {
         Density_average[ic] += Densityfrac[m][ic] * Volfrac[m][ic];
       }
@@ -415,8 +405,8 @@ void material_dominant_matrix(const int ncells, const bool memory_verbose,
     for (int ic = 0; ic < ncells; ic++) {
       Density[ic] = 0.0;
     }
-#pragma omp parallel for collapse(2)
     for (int m = 0; m < nmats; m++) {
+#pragma omp parallel for
       for (int ic = 0; ic < ncells; ic++) {
         if (Volfrac[m][ic] > 0.0) {
           Density_average[ic] += Densityfrac[m][ic] * Volfrac[m][ic];
@@ -460,8 +450,8 @@ void material_dominant_matrix(const int ncells, const bool memory_verbose,
   for (int iter = 0; iter < itermax; iter++) {
     cpu_timer_start(&tstart_cpu);
 
-#pragma omp parallel for collapse(2)
     for (int m = 0; m < nmats; m++) {
+#pragma omp parallel for
       for (int ic = 0; ic < ncells; ic++) {
         if (Volfrac[m][ic] > 0.0) {
           Pressurefrac[m][ic] =
@@ -509,8 +499,8 @@ void material_dominant_matrix(const int ncells, const bool memory_verbose,
   for (int iter = 0; iter < itermax; iter++) {
     cpu_timer_start(&tstart_cpu);
 
-#pragma omp parallel for collapse(2)
     for (int m = 0; m < nmats; m++) {
+#pragma omp parallel for
       for (int ic = 0; ic < ncells; ic++) {
         if (Volfrac[m][ic] > 0.0) {
           double xc[2];
@@ -607,6 +597,7 @@ void cell_dominant_compact(const int ncells, const bool memory_verbose,
   int pure_cell_count = 0;
   int mixed_cell_count = 0;
 
+#pragma omp parallel for
   for (int ic = 0; ic < ncells; ic++) {
     int ix = imaterial[ic];
     if (ix <= 0) {
@@ -714,6 +705,7 @@ void cell_dominant_compact(const int ncells, const bool memory_verbose,
   for (int iter = 0; iter < itermax; iter++) {
     cpu_timer_start(&tstart_cpu);
 
+#pragma omp parallel for
     for (int ic = 0; ic < ncells; ic++) {
       double density_ave = 0.0;
       int ix = imaterial[ic];
@@ -1013,8 +1005,10 @@ void material_centric_compact(const int ncells, const bool memory_verbose,
     for (int C = 0; C < ncells; C++)
       Density[C] = 0.0;
 
-#pragma omp parallel for
     for (int m = 0; m < nmats; m++) {
+// TODO: IS THIS GOING TO BE A DATA RACE?? IDEALLY THE SUBSET2MESH MATRIX
+// CONTAINS UNIQUE ENTRIES
+#pragma omp parallel for
       for (int c = 0; c < ncellsmat[m]; c++) { // Note that this is c not C
         int C = subset2mesh[m][c];
         Density[C] += Densityfrac[m][c] * Volfrac[m][c];
