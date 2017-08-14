@@ -399,8 +399,11 @@ void material_dominant_matrix(const int ncells, const bool memory_verbose,
 
     mdfm_average_density_zero<<<nblocks_cells, NTHREADS>>>(ncells, nmats,
                                                            Density_average);
-    mdfm_average_density<<<nblocks, NTHREADS>>>(ncells, nmats, Density_average,
-                                                Densityfrac, Volfrac, Vol);
+    for (int m = 0; m < nmats; ++m) {
+      mdfm_average_density<<<nblocks, NTHREADS>>>(
+          ncells, nmats, m, Density_average, Densityfrac, Volfrac, Vol);
+    }
+
     gpu_check(cudaDeviceSynchronize());
 
 #if 0
@@ -445,8 +448,11 @@ void material_dominant_matrix(const int ncells, const bool memory_verbose,
 
     mdfm_average_density_zero<<<nblocks_cells, NTHREADS>>>(ncells, nmats,
                                                            Density_average);
-    mdfm_average_density_with_if<<<nblocks, NTHREADS>>>(
-        ncells, nmats, Density_average, Densityfrac, Volfrac, Vol);
+    for (int m = 0; m < nmats; ++m) {
+      mdfm_average_density_with_if<<<nblocks, NTHREADS>>>(
+          ncells, nmats, m, Density_average, Densityfrac, Volfrac, Vol);
+    }
+
     gpu_check(cudaDeviceSynchronize());
 
 #if 0
@@ -499,9 +505,12 @@ void material_dominant_matrix(const int ncells, const bool memory_verbose,
   for (int iter = 0; iter < itermax; iter++) {
     cpu_timer_start(&tstart_cpu);
 
-    mdfm_pressure<<<nblocks, NTHREADS>>>(ncells, nmats, nmatconsts, Volfrac,
-                                         Pressurefrac, Densityfrac,
-                                         Temperaturefrac);
+    for (int m = 0; m < nmats; ++m) {
+      mdfm_pressure<<<nblocks, NTHREADS>>>(ncells, nmats, m, nmatconsts,
+                                           Volfrac, Pressurefrac, Densityfrac,
+                                           Temperaturefrac);
+    }
+
     gpu_check(cudaDeviceSynchronize());
 
 #if 0
@@ -554,9 +563,12 @@ void material_dominant_matrix(const int ncells, const bool memory_verbose,
   for (int iter = 0; iter < itermax; iter++) {
     cpu_timer_start(&tstart_cpu);
 
-    mdfm_average_density_neighbourhood<<<nblocks, NTHREADS>>>(
-        ncells, nmats, nnbrs, nbrs, cen_x, cen_y, Volfrac, Densityfrac,
-        MatDensity_average);
+    for (int m = 0; m < nmats; ++m) {
+      mdfm_average_density_neighbourhood<<<nblocks, NTHREADS>>>(
+          ncells, nmats, m, nnbrs, nbrs, cen_x, cen_y, Volfrac, Densityfrac,
+          MatDensity_average);
+    }
+
     gpu_check(cudaDeviceSynchronize());
 
 #if 0
@@ -934,8 +946,10 @@ void cell_dominant_compact(const int ncells, const bool memory_verbose,
   for (int iter = 0; iter < itermax; iter++) {
     cpu_timer_start(&tstart_cpu);
 
-    ccc_mat_density_zero<<<nblocks_mats, NTHREADS>>>(ncells, nmats,
-                                                     MatDensity_average);
+    for (int m = 0; m < nmats; ++m) {
+      ccc_mat_density_zero<<<nblocks_mats, NTHREADS>>>(ncells, nmats, m,
+                                                       MatDensity_average);
+    }
 
     ccc_average_mat_density_neighbourhood<<<nblocks, NTHREADS>>>(
         ncells, nmats, imaterial, imaterialfrac, nextfrac, nnbrs, nbrs, cen_x,
@@ -1110,7 +1124,7 @@ void material_centric_compact(const int ncells, const bool memory_verbose,
     for (int m = 0; m < nmats; m++) {
       const int ncm = ncellsmat[m];
       const int nblocks = ceil(ncm / (double)NTHREADS);
-      mcc_average_density_by_material<<<nblocks, NTHREADS>>>(
+      mcc_average_density_fractional<<<nblocks, NTHREADS>>>(
           ncm, m, subset2mesh, Densityfrac, Volfrac, Density);
       gpu_check(cudaDeviceSynchronize());
     }
@@ -1453,8 +1467,8 @@ void finish_sum_reduce(int nblocks1, double *reduce_array, double *result) {
   while (nblocks1 > 1) {
     int nblocks0 = nblocks1;
     nblocks1 = max(1, (int)ceil(nblocks1 / (double)NTHREADS));
-    sum_reduce<double, NTHREADS>
-        <<<nblocks1, NTHREADS>>>(reduce_array, reduce_array, nblocks0);
+    sum_reduce<double, NTHREADS><<<nblocks1, NTHREADS>>>(
+        reduce_array, reduce_array, nblocks0);
   }
   gpu_check(cudaDeviceSynchronize());
   cudaMemcpy(&result, &reduce_array, 1, cudaMemcpyDeviceToHost);
