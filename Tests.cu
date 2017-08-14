@@ -391,14 +391,13 @@ void material_dominant_matrix(const int ncells, const bool memory_verbose,
 
   double time_sum = 0;
   struct timeval tstart_cpu;
-  const int nblocks = ceil(ncells * nmats / (double)NTHREADS);
-  const int nblocks_cells = ceil(ncells / (double)NTHREADS);
+  const int nblocks = ceil(ncells / (double)NTHREADS);
 
   for (int iter = 0; iter < itermax; iter++) {
     cpu_timer_start(&tstart_cpu);
 
-    mdfm_average_density_zero<<<nblocks_cells, NTHREADS>>>(ncells, nmats,
-                                                           Density_average);
+    mdfm_average_density_zero<<<nblocks, NTHREADS>>>(ncells, nmats,
+                                                     Density_average);
     for (int m = 0; m < nmats; ++m) {
       mdfm_average_density<<<nblocks, NTHREADS>>>(
           ncells, nmats, m, Density_average, Densityfrac, Volfrac, Vol);
@@ -446,8 +445,8 @@ void material_dominant_matrix(const int ncells, const bool memory_verbose,
   for (int iter = 0; iter < itermax; iter++) {
     cpu_timer_start(&tstart_cpu);
 
-    mdfm_average_density_zero<<<nblocks_cells, NTHREADS>>>(ncells, nmats,
-                                                           Density_average);
+    mdfm_average_density_zero<<<nblocks, NTHREADS>>>(ncells, nmats,
+                                                     Density_average);
     for (int m = 0; m < nmats; ++m) {
       mdfm_average_density_with_if<<<nblocks, NTHREADS>>>(
           ncells, nmats, m, Density_average, Densityfrac, Volfrac, Vol);
@@ -942,14 +941,12 @@ void cell_dominant_compact(const int ncells, const bool memory_verbose,
       (double **)genmatrix("MatDensity_average", ncells, nmats, sizeof(double));
 
   time_sum = 0;
-  const int nblocks_mats = ceil(ncells * nmats / (double)NTHREADS);
   for (int iter = 0; iter < itermax; iter++) {
     cpu_timer_start(&tstart_cpu);
 
-    for (int m = 0; m < nmats; ++m) {
-      ccc_mat_density_zero<<<nblocks_mats, NTHREADS>>>(ncells, nmats, m,
-                                                       MatDensity_average);
-    }
+    const int nblocks_cellsmats = ceil(ncells * nmats / (double)NTHREADS);
+    ccc_mat_density_zero<<<nblocks, NTHREADS>>>(
+        ncells, nmats, m, (double *)(&MatDensity_average[0][0]));
 
     ccc_average_mat_density_neighbourhood<<<nblocks, NTHREADS>>>(
         ncells, nmats, imaterial, imaterialfrac, nextfrac, nnbrs, nbrs, cen_x,
@@ -1114,11 +1111,11 @@ void material_centric_compact(const int ncells, const bool memory_verbose,
   //    Average density with fractional densities - MAT-DOMINANT LOOP
   double time_sum = 0;
   struct timeval tstart_cpu;
-  const int nblocks_cells = ceil(ncells / (double)NTHREADS);
+  const int nblocks = ceil(ncells / (double)NTHREADS);
   for (int iter = 0; iter < itermax; iter++) {
     cpu_timer_start(&tstart_cpu);
 
-    mcc_average_density_zero<<<nblocks_cells, NTHREADS>>>(ncells, Density);
+    mcc_average_density_zero<<<nblocks, NTHREADS>>>(ncells, Density);
     gpu_check(cudaDeviceSynchronize());
 
     for (int m = 0; m < nmats; m++) {
@@ -1175,7 +1172,7 @@ void material_centric_compact(const int ncells, const bool memory_verbose,
   for (int iter = 0; iter < itermax; iter++) {
     cpu_timer_start(&tstart_cpu);
 
-    mcc_average_density_by_cell<<<nblocks_cells, NTHREADS>>>(
+    mcc_average_density_by_cell<<<nblocks, NTHREADS>>>(
         ncells, matids, mesh2subset, nmatscell, Densityfrac, Volfrac, Density,
         Vol);
     gpu_check(cudaDeviceSynchronize());
@@ -1275,8 +1272,8 @@ void material_centric_compact(const int ncells, const bool memory_verbose,
     cpu_timer_start(&tstart_cpu);
 
     const int nblocks_cellsmats = ceil(ncells * nmats / (double)NTHREADS);
-    mcc_mat_density_zero<<<nblocks_cellsmats, NTHREADS>>>(ncells, nmats,
-                                                          MatDensity_average);
+    mcc_mat_density_zero<<<nblocks_cellsmats, NTHREADS>>>(
+        ncells, nmats, (double *)(&MatDensity_average[0][0]));
     gpu_check(cudaDeviceSynchronize());
 
     for (int m = 0; m < nmats; m++) {

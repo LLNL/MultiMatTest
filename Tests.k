@@ -436,14 +436,13 @@ __global__ void ccc_pressure(const int ncells, const double *nmatconsts,
 }
 
 __global__ void ccc_mat_density_zero(const int ncells, const int nmats,
-                                     const int m, double **MatDensity_average) {
-  const int ic = blockIdx.x * blockDim.x + threadIdx.x;
-
-  if (ic >= ncells) {
+                                     const int m, double *MatDensity_average) {
+  const int gid = blockIdx.x * blockDim.x + threadIdx.x;
+  if (gid >= ncells * nmats) {
     return;
   }
 
-  MatDensity_average[ic][m] = 0.0;
+  MatDensity_average[gid] = 0.0;
 }
 
 __global__ void ccc_average_mat_density_neighbourhood(
@@ -667,14 +666,11 @@ __global__ void mcc_average_density_by_neighbourhood(
 }
 
 __global__ void mcc_mat_density_zero(const int ncells, const int nmats,
-                                     double **MatDensity_average) {
+                                     double *MatDensity_average) {
   const int gid = blockIdx.x * blockDim.x + threadIdx.x;
-  const int m = gid / ncells;
-  const int C = gid % ncells;
-
   if (gid >= ncells * nmats) {
     return;
   }
 
-  MatDensity_average[m][C] = 0.0;
+  MatDensity_average[gid] = 0.0;
 }
