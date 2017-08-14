@@ -42,7 +42,6 @@ void single_material(const int ncells, const bool memory_verbose,
     cpu_timer_start(&tstart_cpu);
 
     double density_ave = 0.0;
-#pragma omp parallel for reduction(+ : density_ave)
     for (int ic = 0; ic < ncells; ic++) {
       density_ave += Density[ic] * Vol[ic];
     }
@@ -65,7 +64,6 @@ void single_material(const int ncells, const bool memory_verbose,
   for (int iter = 0; iter < itermax; iter++) {
     cpu_timer_start(&tstart_cpu);
 
-#pragma omp parallel for
     for (int ic = 0; ic < ncells; ic++) {
       Pressure[ic] = (nmatconst * Density[ic] * Temperature[ic]) / Vol[ic];
     }
@@ -129,10 +127,8 @@ void cell_dominant_full_matrix(const int ncells, const bool memory_verbose,
   for (int iter = 0; iter < itermax; iter++) {
     cpu_timer_start(&tstart_cpu);
 
-#pragma omp parallel for
     for (int ic = 0; ic < ncells; ic++) {
       double density_ave = 0.0;
-#pragma omp reduction(+ : density_ave)
       for (int m = 0; m < nmats; m++) {
         density_ave += Densityfrac[ic][m] * Volfrac[ic][m];
       }
@@ -162,10 +158,8 @@ void cell_dominant_full_matrix(const int ncells, const bool memory_verbose,
   for (int iter = 0; iter < itermax; iter++) {
     cpu_timer_start(&tstart_cpu);
 
-#pragma omp parallel for
     for (int ic = 0; ic < ncells; ic++) {
       double density_ave = 0.0;
-#pragma omp reduction(+ : density_ave)
       for (int m = 0; m < nmats; m++) {
         if (Volfrac[ic][m] > 0.0) {
           density_ave += Densityfrac[ic][m] * Volfrac[ic][m];
@@ -207,9 +201,7 @@ void cell_dominant_full_matrix(const int ncells, const bool memory_verbose,
   for (int iter = 0; iter < itermax; iter++) {
     cpu_timer_start(&tstart_cpu);
 
-#pragma omp parallel for
     for (int ic = 0; ic < ncells; ic++) {
-#pragma omp
       for (int m = 0; m < nmats; m++) {
         if (Volfrac[ic][m] > 0.) {
           Pressurefrac[ic][m] =
@@ -255,7 +247,6 @@ void cell_dominant_full_matrix(const int ncells, const bool memory_verbose,
   time_sum = 0;
   for (int iter = 0; iter < itermax; iter++) {
 
-#pragma omp parallel for
     for (int ic = 0; ic < ncells; ic++) {
       double xc[2];
       xc[0] = cen_x[ic];
@@ -264,11 +255,9 @@ void cell_dominant_full_matrix(const int ncells, const bool memory_verbose,
       int cnbrs[8];
       double dsqr[8];
 
-#pragma omp
       for (int n = 0; n < nn; n++)
         cnbrs[n] = nbrs[ic][n];
 
-#pragma omp
       for (int n = 0; n < nn; n++) {
         dsqr[n] = 0.0;
         // TODO: Fairly sure this was meant to iterate over both dimensions??
@@ -276,7 +265,6 @@ void cell_dominant_full_matrix(const int ncells, const bool memory_verbose,
         dsqr[n] += ddist * ddist;
       }
 
-#pragma omp
       for (int m = 0; m < nmats; m++) {
         if (Volfrac[ic][m] > 0.0) {
           int nnm = 0; // number of nbrs with this material
@@ -368,17 +356,14 @@ void material_dominant_matrix(const int ncells, const bool memory_verbose,
   for (int iter = 0; iter < itermax; iter++) {
     cpu_timer_start(&tstart_cpu);
 
-#pragma omp parallel for
     for (int ic = 0; ic < ncells; ic++) {
       Density_average[ic] = 0.0;
     }
-#pragma omp parallel for collapse(2)
     for (int m = 0; m < nmats; m++) {
       for (int ic = 0; ic < ncells; ic++) {
         Density_average[ic] += Densityfrac[m][ic] * Volfrac[m][ic];
       }
     }
-#pragma omp parallel for
     for (int ic = 0; ic < ncells; ic++) {
       Density_average[ic] /= Vol[ic];
     }
@@ -409,13 +394,11 @@ void material_dominant_matrix(const int ncells, const bool memory_verbose,
   for (int iter = 0; iter < itermax; iter++) {
     cpu_timer_start(&tstart_cpu);
 
-// NOTE: Fairly sure this is mean to be Density_average, it was previously
-// Density.
-#pragma omp parallel for
+    // NOTE: Fairly sure this is mean to be Density_average, it was previously
+    // Density.
     for (int ic = 0; ic < ncells; ic++) {
       Density[ic] = 0.0;
     }
-#pragma omp parallel for collapse(2)
     for (int m = 0; m < nmats; m++) {
       for (int ic = 0; ic < ncells; ic++) {
         if (Volfrac[m][ic] > 0.0) {
@@ -460,7 +443,6 @@ void material_dominant_matrix(const int ncells, const bool memory_verbose,
   for (int iter = 0; iter < itermax; iter++) {
     cpu_timer_start(&tstart_cpu);
 
-#pragma omp parallel for collapse(2)
     for (int m = 0; m < nmats; m++) {
       for (int ic = 0; ic < ncells; ic++) {
         if (Volfrac[m][ic] > 0.0) {
@@ -509,7 +491,6 @@ void material_dominant_matrix(const int ncells, const bool memory_verbose,
   for (int iter = 0; iter < itermax; iter++) {
     cpu_timer_start(&tstart_cpu);
 
-#pragma omp parallel for collapse(2)
     for (int m = 0; m < nmats; m++) {
       for (int ic = 0; ic < ncells; ic++) {
         if (Volfrac[m][ic] > 0.0) {
@@ -633,7 +614,6 @@ void cell_dominant_compact(const int ncells, const bool memory_verbose,
   for (int iter = 0; iter < itermax; iter++) {
     cpu_timer_start(&tstart_cpu);
 
-#pragma omp parallel for
     for (int ic = 0; ic < ncells; ic++) {
       double density_ave = 0.0;
       int ix = imaterial[ic];
@@ -672,7 +652,6 @@ void cell_dominant_compact(const int ncells, const bool memory_verbose,
   for (int iter = 0; iter < itermax; iter++) {
     cpu_timer_start(&tstart_cpu);
 
-#pragma omp parallel for
     for (int ic = 0; ic < ncells; ic++) {
       double density_ave = 0.0;
       int mstart = imaterial[ic];
@@ -760,7 +739,6 @@ void cell_dominant_compact(const int ncells, const bool memory_verbose,
   for (int iter = 0; iter < itermax; iter++) {
     cpu_timer_start(&tstart_cpu);
 
-#pragma omp parallel for
     for (int ic = 0; ic < ncells; ic++) {
       int ix = imaterial[ic];
       double density_ave = 0.0;
@@ -805,7 +783,6 @@ void cell_dominant_compact(const int ncells, const bool memory_verbose,
   for (int iter = 0; iter < itermax; iter++) {
     cpu_timer_start(&tstart_cpu);
 
-#pragma omp parallel for
     for (int ic = 0; ic < ncells; ic++) {
       int ix = imaterial[ic];
       if (ix <= 0) { // material numbers for clean cells start at 1
@@ -851,7 +828,6 @@ void cell_dominant_compact(const int ncells, const bool memory_verbose,
   for (int iter = 0; iter < itermax; iter++) {
     cpu_timer_start(&tstart_cpu);
 
-#pragma omp parallel for
     for (int ic = 0; ic < ncells; ic++) {
       for (int m = 0; m < nmats; m++)
         MatDensity_average[ic][m] = 0.0;
@@ -1009,11 +985,9 @@ void material_centric_compact(const int ncells, const bool memory_verbose,
   for (int iter = 0; iter < itermax; iter++) {
     cpu_timer_start(&tstart_cpu);
 
-#pragma omp parallel for
     for (int C = 0; C < ncells; C++)
       Density[C] = 0.0;
 
-#pragma omp parallel for
     for (int m = 0; m < nmats; m++) {
       for (int c = 0; c < ncellsmat[m]; c++) { // Note that this is c not C
         int C = subset2mesh[m][c];
@@ -1021,7 +995,6 @@ void material_centric_compact(const int ncells, const bool memory_verbose,
       }
     }
 
-#pragma omp parallel for
     for (int C = 0; C < ncells; C++)
       Density[C] /= Vol[C];
 
@@ -1056,7 +1029,6 @@ void material_centric_compact(const int ncells, const bool memory_verbose,
   for (int iter = 0; iter < itermax; iter++) {
     cpu_timer_start(&tstart_cpu);
 
-#pragma omp parallel for
     for (int C = 0; C < ncells; C++) {
       double density_ave = 0.0;
       for (int im = 0; im < nmatscell[C]; im++) {
@@ -1100,7 +1072,6 @@ void material_centric_compact(const int ncells, const bool memory_verbose,
   for (int iter = 0; iter < itermax; iter++) {
     cpu_timer_start(&tstart_cpu);
 
-#pragma omp parallel for collapse(2)
     for (int m = 0; m < nmats; m++) {
       for (int c = 0; c < ncellsmat[m]; c++) {
         Pressurefrac[m][c] =
@@ -1139,11 +1110,9 @@ void material_centric_compact(const int ncells, const bool memory_verbose,
     cpu_timer_start(&tstart_cpu);
 
     for (int m = 0; m < nmats; m++) {
-#pragma omp parallel for
       for (int C = 0; C < ncells; C++)
         MatDensity_average[m][C] = 0.0;
 
-#pragma omp parallel for
       for (int c = 0; c < ncellsmat[m]; c++) { // Note that this is c not C
         int C = subset2mesh[m][c];
         double xc[2];
@@ -1161,7 +1130,6 @@ void material_centric_compact(const int ncells, const bool memory_verbose,
         }
 
         int nnm = 0; // number of nbrs with this material
-#pragma omp parallel for
         for (int n = 0; n < nn; n++) {
           int C_j = cnbrs[n];
           int c_j = mesh2subset[m][C_j];
