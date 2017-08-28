@@ -1006,8 +1006,6 @@ void material_centric_compact(const int ncells, const bool memory_verbose,
       Density[C] = 0.0;
 
     for (int m = 0; m < nmats; m++) {
-// TODO: IS THIS GOING TO BE A DATA RACE?? IDEALLY THE SUBSET2MESH MATRIX
-// CONTAINS UNIQUE ENTRIES
 #pragma omp parallel for
       for (int c = 0; c < ncellsmat[m]; c++) { // Note that this is c not C
         int C = subset2mesh[m][c];
@@ -1094,8 +1092,8 @@ void material_centric_compact(const int ncells, const bool memory_verbose,
   for (int iter = 0; iter < itermax; iter++) {
     cpu_timer_start(&tstart_cpu);
 
-#pragma omp parallel for collapse(2)
     for (int m = 0; m < nmats; m++) {
+#pragma omp parallel for
       for (int c = 0; c < ncellsmat[m]; c++) {
         Pressurefrac[m][c] =
             (nmatconsts[m] * Densityfrac[m][c] * Temperaturefrac[m][c]) /
@@ -1134,8 +1132,9 @@ void material_centric_compact(const int ncells, const bool memory_verbose,
 
     for (int m = 0; m < nmats; m++) {
 #pragma omp parallel for
-      for (int C = 0; C < ncells; C++)
+      for (int C = 0; C < ncells; C++) {
         MatDensity_average[m][C] = 0.0;
+      }
 
 #pragma omp parallel for
       for (int c = 0; c < ncellsmat[m]; c++) { // Note that this is c not C
@@ -1155,7 +1154,6 @@ void material_centric_compact(const int ncells, const bool memory_verbose,
         }
 
         int nnm = 0; // number of nbrs with this material
-#pragma omp parallel for
         for (int n = 0; n < nn; n++) {
           int C_j = cnbrs[n];
           int c_j = mesh2subset[m][C_j];
