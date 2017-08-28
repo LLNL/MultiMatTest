@@ -1,0 +1,179 @@
+Run stream benchmark for your system
+L3 Cache on Macbook Pro is 6MB so problem size is just bigger at 16MB min
+First test should give Stream Benchmark or problem size is too small
+Second problem should give about twice the first
+=======================================
+Starting Single Material Data Structure
+=======================================
+
+GENMALLOC TOTAL:          Memory Size: 	  1090519440 Bytes, 1090519 KB,  1090 MB
+
+Average Density of pure cells    0.000000, compute time is 1.265110 msecs
+Memory Operations  are 8.4 M memops, 67.1 Mbytes, 8.4 Mflops, 1.00:1 memops:flops
+Estimated performance 5.02 msec, actual 1.27 msec, model error 296.604645 %
+
+Pressure Calculation for cell,             compute time is 2.086300 msecs
+Memory Operations  are 16.8 M memops, 134.2 Mbytes, 12.6 Mflops, 1.33:1 memops:flops
+Estimated performance 10.03 msec, actual 2.09 msec, model error 380.993652 %
+
+
+=================================================
+Starting Cell-Dominant Full Matrix Data Structure
+=================================================
+
+Ratios to Full Data Structure
+Sparsity 97.399979 percent/Filled 2.600020 percent
+
+Ratios to Number of Cells
+Pure cell 80.004761 percentage/Mixed material 19.995235 percentage
+
+Ratios to Mixed Material Data Structure
+Mixed material Sparsity 5.000814 percent/Mixed material Filled 94.999191 percent
+
+1 matcell 3355643 2 matcell 523753 3 matcell 210144 4 matcell 104764 5 matcell 0
+
+GENMALLOC TOTAL:          Memory Size: 	  7935623568 Bytes, 7935623 KB,  7935 MB
+
+Average Density of mixed material cells    compute time is 45.422501 msecs
+Memory Operations  are 427.8 M memops, 3422.6 Mbytes, 419.4 Mflops, 1.02:1 memops:flops
+Estimated performance 255.89 msec, actual 45.42 msec, model error 463.358978 %
+
+Average Density of frac with if            compute time is 45.388359 msecs
+Memory Operations  are 223.6 M memops, 1788.5 Mbytes, 15.1 Mflops, 14.81:1 memops:flops
+Estimated performance 392.21 msec, actual 45.39 msec, model error 764.123291 %
+
+Pressure Calculation of mixed material cells with if compute time is 88.401047 msecs
+Memory Operations  are 435.8 M memops, 3486.3 Mbytes, 16.4 Mflops, 26.64:1 memops:flops
+Estimated performance 519.15 msec, actual 88.40 msec, model error 487.271057 %
+
+Average Material Density            compute time is 5757.296875 msecs
+Memory Operations  are 1679.4 M memops, 13435.2 Mbytes, 332.2 Mflops, 5.06:1 memops:flops
+Estimated performance 1263.00 msec, actual 5757.30 msec, model error -78.062637 %
+
+
+===================================================
+Starting Material-Dominant Full Matrix Data Structure
+===================================================
+Ratios to Full Data Structure
+Sparsity 97.399979 percent/Filled 2.600020 percent
+
+Ratios to Number of Cells
+Pure cell 80.004761 percentage/Mixed material 19.995235 percentage
+
+Ratios to Mixed Material Data Structure
+Mixed material Sparsity 5.000814 percent/Mixed material Filled 94.999191 percent
+
+1 matcell 3355643 2 matcell 523753 3 matcell 210144 4 matcell 104764 5 matcell 0
+
+GENMALLOC TOTAL:          Memory Size: 	  7801407440 Bytes, 7801407 KB,  7801 MB
+
+Average Density of mixed material cells    compute time is 85.585300 msecs
+Memory Operations  are 641.7 M memops, 5133.8 Mbytes, 423.6 Mflops, 1.51:1 memops:flops
+Estimated performance 383.84 msec, actual 85.59 msec, model error 348.485474 %
+
+Average Density of mixed material cells with if compute time is 52.408740 msecs
+Memory Operations  are 233.2 M memops, 1865.6 Mbytes, 15.1 Mflops, 15.44:1 memops:flops
+Estimated performance 397.98 msec, actual 52.41 msec, model error 659.380066 %
+
+Pressure Calculation of frac with if       compute time is 86.253520 msecs
+Memory Operations  are 430.3 M memops, 3442.7 Mbytes, 16.4 Mflops, 26.31:1 memops:flops
+Estimated performance 515.89 msec, actual 86.25 msec, model error 498.111816 %
+
+Average Material Density            compute time is 146.288590 msecs
+Memory Operations  are 1848.0 M memops, 14784.2 Mbytes, 398.0 Mflops, 4.64:1 memops:flops
+Estimated performance 1363.85 msec, actual 146.29 msec, model error 832.303711 %
+
+
+===================================================
+Starting Cell-Dominant Compact Data Structure
+===================================================
+Ratios to Full Data Structure
+Sparsity 97.399979 percent/Filled 2.600020 percent
+
+Ratios to Number of Cells
+Pure cell 80.004761 percentage/Mixed material 19.995235 percentage
+
+Ratios to Mixed Material Data Structure
+Mixed material Sparsity 5.000814 percent/Mixed material Filled 94.999191 percent
+
+1 matcell 3355643 2 matcell 523753 3 matcell 210144 4 matcell 104764 5 matcell 0
+
+GENMALLOC TOTAL:          Memory Size: 	  1216341608 Bytes, 1216341 KB,  1216 MB
+
+Average Density of mixed material cells    compute time is 1.985890 msecs
+Memory Operations  are 4.3 M memops, 17.5 Mbytes, 0.1 Mflops, 62.49:1 memops:flops
+Estimated performance 1.31 msec, actual 1.99 msec, model error -34.246479 %
+
+Average Density of mixed material cells with nmats  compute time is 2.592720 msecs
+Memory Operations  are 4.3 M memops, 17.3 Mbytes, 0.1 Mflops, 61.99:1 memops:flops
+Estimated performance 1.30 msec, actual 2.59 msec, model error -50.032852 %
+
+Average Density of mixed material cells    compute time is 2.417390 msecs
+Memory Operations  are 4.3 M memops, 17.5 Mbytes, 0.1 Mflops, 62.49:1 memops:flops
+Estimated performance 1.31 msec, actual 2.42 msec, model error -45.983376 %
+
+Average Density of mixed materials cells pure filler  compute time is 3.126390 msecs
+Memory Operations  are 4.3 M memops, 17.5 Mbytes, 0.1 Mflops, 62.49:1 memops:flops
+Estimated performance 1.31 msec, actual 3.13 msec, model error -58.233215 %
+
+Pressure Calculation of mixed material cells compute time is 4.660620 msecs
+Memory Operations  are 4.4 M memops, 18.2 Mbytes, 0.1 Mflops, 42.66:1 memops:flops
+Estimated performance 1.36 msec, actual 4.66 msec, model error -70.879112 %
+
+Average Material Density            compute time is 57.997490 msecs
+Memory Operations  are 835.7 M memops, 6685.9 Mbytes, 337.6 Mflops, 2.48:1 memops:flops
+Estimated performance 499.88 msec, actual 58.00 msec, model error 761.898804 %
+
+
+===================================================
+Starting Material-Centric Compact Data Structure
+===================================================
+Ratios to Full Data Structure
+Sparsity 97.399979 percent/Filled 2.600020 percent
+
+Ratios to Number of Cells
+Pure cell 80.004761 percentage/Mixed material 19.995235 percentage
+
+Ratios to Mixed Material Data Structure
+Mixed material Sparsity 5.000814 percent/Mixed material Filled 94.999191 percent
+
+1 matcell 3355643 2 matcell 523753 3 matcell 210144 4 matcell 104764 5 matcell 0
+
+GENMALLOC TOTAL:          Memory Size: 	  2142454988 Bytes, 2142454 KB,  2142 MB
+
+Average Density of cells - Mat Dominant loop  -  compute time is 18.253071 msecs
+Memory Operations  are 82.2 M memops, 635.9 Mbytes, 15.1 Mflops, 5.44:1 memops:flops
+Estimated performance 47.54 msec, actual 18.25 msec, model error 160.454590 %
+
+Average Density of cells - Cell Dominant loop  -  compute time is 35.896770 msecs
+Memory Operations  are 192.5 M memops, 1152.6 Mbytes, 15.1 Mflops, 12.75:1 memops:flops
+Estimated performance 86.18 msec, actual 35.90 msec, model error 140.065933 %
+
+Pressure Calculation of cells - Mat-Centric -  compute time is 3.606890 msecs
+Memory Operations  are 21.8 M memops, 174.5 Mbytes, 16.4 Mflops, 1.33:1 memops:flops
+Estimated performance 13.05 msec, actual 3.61 msec, model error 261.685333 %
+
+Average Material Density  -  compute time is 138.767944 msecs
+Memory Operations  are 1431.1 M memops, 11448.8 Mbytes, 349.0 Mflops, 4.10:1 memops:flops
+Estimated performance 855.99 msec, actual 138.77 msec, model error 516.848999 %
+
+Conversion from compact material data structure to compact cell data structure
+Memory Operations  are 183.0 M memops, 804.0 Mbytes, 0.0 Mflops, inf:1 memops:flops
+Estimated performance 60.11 msec, actual 603.70 msec, model error -90.042908 %
+
+Ratios to Full Data Structure
+Sparsity 97.399979 percent/Filled 2.600020 percent
+
+Ratios to Number of Cells
+Pure cell 80.004761 percentage/Mixed material 19.995235 percentage
+
+Ratios to Mixed Material Data Structure
+Mixed material Sparsity 5.000814 percent/Mixed material Filled 94.999191 percent
+
+1 matcell 3355643 2 matcell 523753 3 matcell 210144 4 matcell 104764 5 matcell 0
+
+Conversion from compact cell data structure to compact material data structure
+Memory Operations  are 501.5 M memops, 2512.8 Mbytes, 0.0 Mflops, inf:1 memops:flops
+Estimated performance 187.87 msec, actual 1332.25 msec, model error -85.897964 %
+
+Application 564614 resources: utime ~6130s, stime ~175s, Rss ~9319892, inblocks ~0, outblocks ~0
