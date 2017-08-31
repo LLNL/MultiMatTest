@@ -3,8 +3,8 @@ GCC_FLAGS = -O3 -fopenmp -std=c99
 GXX_FLAGS = -O3 -mcpu=power8 -mtune=power8 -fopenmp -std=c++11 
 XLC_FLAGS = -O5 -qsmp=omp -qarch=pwr8 -qtune=pwr8 -std=c99
 XLX_FLAGS = -O5 -qsmp=omp -qarch=pwr8 -qtune=pwr8 #-std=c++11
-ICC_FLAGS = -O3 -qopenmp -std=c99 -xhost#-xMIC-AVX512
-IXX_FLAGS = -O3 -qopenmp -std=c++11 -xhost#-xMIC-AVX512
+ICC_FLAGS = -O3 -qopenmp -std=c99 #-xhost#-xMIC-AVX512
+IXX_FLAGS = -O3 -qopenmp -std=c++11 #-xhost#-xMIC-AVX512
 
 ifeq ($(DEBUG), yes)
   GCC_FLAGS = -O0 -g -fopenmp -std=c99
