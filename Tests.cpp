@@ -18,6 +18,7 @@ void single_material(const int ncells, const bool memory_verbose,
   double *Vol = (double *)genvector("Volume", ncells, sizeof(double));
 
   double VolTotal = 0.0;
+#pragma omp parallel for
   for (int ic = 0; ic < ncells; ic++) {
     Density[ic] = 2.0;
     Temperature[ic] = 0.5;
@@ -406,7 +407,7 @@ void material_dominant_matrix(const int ncells, const bool memory_verbose,
       Density[ic] = 0.0;
     }
     for (int m = 0; m < nmats; m++) {
-#pragma omp parallel for
+#pragma omp parallel for simd
       for (int ic = 0; ic < ncells; ic++) {
         if (Volfrac[m][ic] > 0.0) {
           Density_average[ic] += Densityfrac[m][ic] * Volfrac[m][ic];
@@ -597,7 +598,7 @@ void cell_dominant_compact(const int ncells, const bool memory_verbose,
   int pure_cell_count = 0;
   int mixed_cell_count = 0;
 
-#pragma omp parallel for
+#pragma omp parallel for reduction(+:nmixlength,mixed_cell_count,pure_cell_count)
   for (int ic = 0; ic < ncells; ic++) {
     int ix = imaterial[ic];
     if (ix <= 0) {
