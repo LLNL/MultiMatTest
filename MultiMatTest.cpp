@@ -28,7 +28,7 @@
 bool verbose = false;
 bool memory_verbose = false;
 int itermax = 100;
-int ncells = 1000000;
+int ncells = (32 * 64 * 32 * 64);
 int nmats = 50;
 float model_error;
 
@@ -191,6 +191,7 @@ void setup_cell_dominant_data_structure(int method, double *&Vol,
 
   get_vol_frac_matrix(method, Volfrac, filled_percentage);
 
+#pragma omp parallel for
   for (int ic = 0; ic < ncells; ic++) {
     Vol[ic] = 0.0;
     for (int m = 0; m < nmats; m++) {
@@ -229,6 +230,7 @@ void setup_material_dominant_data_structure(
   get_vol_frac_matrix(method, Volfrac_fullcc, filled_percentage);
 
   for (int m = 0; m < nmats; m++) {
+#pragma omp parallel for
     for (int ic = 0; ic < ncells; ic++) {
       if (Volfrac_fullcc[ic][m] > 0.0) {
         Volfrac[m][ic] = Volfrac_fullcc[ic][m];
@@ -286,6 +288,7 @@ void setup_cell_dominant_compact_data_structure(
   Pressurefrac = (double *)genvector("Pressurefrac", mxsize, sizeof(double));
 
   ix = 0;
+#pragma omp parallel for
   for (int ic = 0; ic < ncells; ic++) {
     int m1, m2, m3, m4;
     int nnz = 0;
