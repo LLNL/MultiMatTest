@@ -266,17 +266,25 @@ void setup_cell_dominant_compact_data_structure(
   double **Volfrac_fullcc; // full cell-centric matrix of fractional volumes
   get_vol_frac_matrix(method, Volfrac_fullcc, filled_percentage);
 
-  int ix = 0;
+  int* tix = (int*)genvector("tix", ncells+1, sizeof(int));
+  tix[0] = 0;
+
+  int ix0 = 0;
   for (int ic = 0; ic < ncells; ic++) {
     int nnz = 0;
     for (int im = 0; im < nmats; im++) {
       if (Volfrac_fullcc[ic][im] > 0.0)
         nnz++;
     }
+
+    tix[ic+1] = tix[ic];
+    if(nnz > 1)
+      tix[ic+1]+=nnz;
+
     if (nnz > 1)
-      ix += nnz;
+      ix0 += nnz;
   }
-  int mxsize = ix;
+  int mxsize = ix0;
 
   imaterialfrac = (int *)genvector("imaterialfrac", mxsize, sizeof(int));
   nextfrac = (int *)genvector("nextfrac", mxsize, sizeof(int));
@@ -287,11 +295,11 @@ void setup_cell_dominant_compact_data_structure(
       (double *)genvector("Temperaturefrac", mxsize, sizeof(double));
   Pressurefrac = (double *)genvector("Pressurefrac", mxsize, sizeof(double));
 
-  ix = 0;
 #pragma omp parallel for
   for (int ic = 0; ic < ncells; ic++) {
     int m1, m2, m3, m4;
     int nnz = 0;
+    int ix = tix[ic];
     for (int im = 0; im < nmats; im++) {
       if (Volfrac_fullcc[ic][im] > 0.0) {
         nnz++;
@@ -332,7 +340,6 @@ void setup_cell_dominant_compact_data_structure(
       frac2cell[ix + 1] = ic;
       frac2cell[ix + 2] = ic;
       frac2cell[ix + 3] = ic;
-      ix += 4;
     } else if (nnz == 3) {
       imaterial[ic] = -ix;
       nmaterials[ic] = 3;
@@ -354,7 +361,6 @@ void setup_cell_dominant_compact_data_structure(
       frac2cell[ix] = ic;
       frac2cell[ix + 1] = ic;
       frac2cell[ix + 2] = ic;
-      ix += 3;
     } else if (nnz == 2) {
       imaterial[ic] = -ix;
       nmaterials[ic] = 2;
@@ -370,7 +376,6 @@ void setup_cell_dominant_compact_data_structure(
       nextfrac[ix + 1] = -1;
       frac2cell[ix] = ic;
       frac2cell[ix + 1] = ic;
-      ix += 2;
     } else {
       imaterial[ic] = (m1 + 1);
       nmaterials[ic] = 1;
@@ -503,16 +508,24 @@ void setup_mat_dominant_compact_data_structure(
   // Now populate the compact data structures
   for (int m = 0; m < nmats; m++)
     ncellsmat[m] = 0;
+
   for (int C = 0; C < ncells; C++) {
     for (int im = 0; im < nmatscell[C]; im++) {
       int m = matids[4 * C + im];
       int c = ncellsmat[m];
       subset2mesh[m][c] = C;
       mesh2subset[m][C] = c;
+      (ncellsmat[m])++;
+    }
+  }
+
+  for (int m = 0; m < nmats; m++) {
+#pragma omp parallel for
+    for (int c = 0; c < ncellsmat[m]; c++) { // Note that this is c not C
+      int C = subset2mesh[m][c];
       Volfrac[m][c] = Volfrac_fullcc[C][m];
       Densityfrac[m][c] = 2.0;
       Temperaturefrac[m][c] = 0.5;
-      (ncellsmat[m])++;
     }
   }
 
