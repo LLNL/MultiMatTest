@@ -28,7 +28,7 @@
 bool verbose = false;
 bool memory_verbose = false;
 int itermax = 100;
-int ncells = 1000000;
+int ncells = (4096*4096);
 int nmats = 50;
 float model_error;
 
