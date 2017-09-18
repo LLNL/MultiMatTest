@@ -28,7 +28,7 @@
 bool verbose = false;
 bool memory_verbose = false;
 int itermax = 100;
-int ncells = 1000000;
+int ncells = (4096*4096);
 int nmats = 50;
 float model_error;
 
@@ -73,6 +73,7 @@ int main(int argc, char **argv) {
 
   single_material(ncells, memory_verbose, itermax, nmatconst);
 
+#if 0
   cell_dominant_full_matrix(ncells, memory_verbose, itermax, nmatconst, method,
                             nmats, L_f, nnbrs_ave, nmatconsts, cen_x, cen_y,
                             nnbrs, nbrs);
@@ -80,6 +81,7 @@ int main(int argc, char **argv) {
   material_dominant_matrix(ncells, memory_verbose, itermax, nmatconst, method,
                            nmats, L_f, nnbrs_ave, nmatconsts, cen_x, cen_y,
                            nnbrs, nbrs);
+#endif // if 0
 
   cell_dominant_compact(ncells, memory_verbose, itermax, nmatconst, method,
                         nmats, L_f, nnbrs_ave, nmatconsts, cen_x, cen_y, nnbrs,
