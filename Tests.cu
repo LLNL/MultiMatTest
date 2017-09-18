@@ -41,8 +41,9 @@ void single_material(const int ncells, const bool memory_verbose,
   double time_sum = 0.0;
   double density_ave = 0.0;
   const int nblocks = ceil(ncells / (double)NTHREADS);
-  for (int iter = 0; iter < itermax; iter++) {
-    cpu_timer_start(&tstart_cpu);
+  for (int iter = 0; iter < itermax+1; iter++) {
+    if(iter > 0)
+      cpu_timer_start(&tstart_cpu);
 
     sm_average_density<<<nblocks, NTHREADS>>>(ncells, Density, Vol,
                                               ReduceArray);
@@ -50,7 +51,8 @@ void single_material(const int ncells, const bool memory_verbose,
     gpu_check(cudaDeviceSynchronize());
     density_ave /= VolTotal;
 
-    time_sum += cpu_timer_stop(tstart_cpu);
+    if(iter > 0)
+      time_sum += cpu_timer_stop(tstart_cpu);
   }
   float act_perf = time_sum * 1000.0 / itermax;
   printf("Average Density of pure cells    %lf, compute time is %lf msecs\n",
@@ -63,7 +65,8 @@ void single_material(const int ncells, const bool memory_verbose,
 
   //    Calculate pressure using ideal gas law
   time_sum = 0;
-  for (int iter = 0; iter < itermax; iter++) {
+  for (int iter = 0; iter < itermax+1; iter++) {
+    if(iter > 0)
     cpu_timer_start(&tstart_cpu);
 
     sm_pressure<<<nblocks, NTHREADS>>>(ncells, nmatconst, Density, Temperature,
@@ -76,6 +79,7 @@ void single_material(const int ncells, const bool memory_verbose,
     }
 #endif // if 0
 
+    if(iter > 0)
     time_sum += cpu_timer_stop(tstart_cpu);
   }
   act_perf = time_sum * 1000.0 / itermax;
@@ -134,8 +138,9 @@ void cell_dominant_full_matrix(const int ncells, const bool memory_verbose,
   double time_sum = 0.0;
   double density_ave = 0.0;
   const int nblocks = ceil(ncells / (double)NTHREADS);
-  for (int iter = 0; iter < itermax; iter++) {
-    cpu_timer_start(&tstart_cpu);
+  for (int iter = 0; iter < itermax+1; iter++) {
+    if(iter > 0)
+      cpu_timer_start(&tstart_cpu);
 
     cdfm_average_density<<<nblocks, NTHREADS>>>(ncells, nmats, Density, Vol,
                                                 Densityfrac, Volfrac,
@@ -153,6 +158,7 @@ void cell_dominant_full_matrix(const int ncells, const bool memory_verbose,
     }
 #endif // if 0
 
+    if(iter > 0) 
     time_sum += cpu_timer_stop(tstart_cpu);
   }
   float act_perf = time_sum * 1000.0 / itermax;
@@ -173,8 +179,9 @@ void cell_dominant_full_matrix(const int ncells, const bool memory_verbose,
       (double *)genvector("Density_average", ncells, sizeof(double));
 
   time_sum = 0;
-  for (int iter = 0; iter < itermax; iter++) {
-    cpu_timer_start(&tstart_cpu);
+  for (int iter = 0; iter < itermax+1; iter++) {
+    if(iter > 0)
+      cpu_timer_start(&tstart_cpu);
 
     cdfm_average_density_with_if<<<nblocks, NTHREADS>>>(
         ncells, nmats, Density, Vol, Densityfrac, Volfrac, ReduceArray,
@@ -194,7 +201,8 @@ void cell_dominant_full_matrix(const int ncells, const bool memory_verbose,
     }
 #endif // if 0
 
-    time_sum += cpu_timer_stop(tstart_cpu);
+    if(iter > 0)
+      time_sum += cpu_timer_stop(tstart_cpu);
   }
   act_perf = time_sum * 1000.0 / itermax;
   printf("Average Density of frac with if            compute time is %lf "
@@ -224,7 +232,8 @@ void cell_dominant_full_matrix(const int ncells, const bool memory_verbose,
 
   //   Calculate pressure using ideal gas law
   time_sum = 0;
-  for (int iter = 0; iter < itermax; iter++) {
+  for (int iter = 0; iter < itermax+1; iter++) {
+    if(iter > 0)
     cpu_timer_start(&tstart_cpu);
 
     cdfm_pressure<<<nblocks, NTHREADS>>>(ncells, nmats, nmatconsts, Volfrac,
@@ -246,6 +255,7 @@ void cell_dominant_full_matrix(const int ncells, const bool memory_verbose,
     }
 #endif // if 0
 
+    if(iter > 0)
     time_sum += cpu_timer_stop(tstart_cpu);
   }
   act_perf = time_sum * 1000.0 / itermax;
@@ -278,7 +288,8 @@ void cell_dominant_full_matrix(const int ncells, const bool memory_verbose,
       (double **)genmatrix("MatDensity_average", ncells, nmats, sizeof(double));
 
   time_sum = 0;
-  for (int iter = 0; iter < itermax; iter++) {
+  for (int iter = 0; iter < itermax+1; iter++) {
+    if(iter > 0)
     cpu_timer_start(&tstart_cpu);
     cdfm_average_density_neighbourhood<<<nblocks, NTHREADS>>>(
         ncells, nmats, nnbrs, nbrs, cen_x, cen_y, Volfrac, Densityfrac,
@@ -321,6 +332,7 @@ void cell_dominant_full_matrix(const int ncells, const bool memory_verbose,
     }
 #endif // if 0
 
+    if(iter > 0)
     time_sum += cpu_timer_stop(tstart_cpu);
   }
   act_perf = time_sum * 1000.0 / itermax;
@@ -393,7 +405,8 @@ void material_dominant_matrix(const int ncells, const bool memory_verbose,
   struct timeval tstart_cpu;
   const int nblocks = ceil(ncells / (double)NTHREADS);
 
-  for (int iter = 0; iter < itermax; iter++) {
+  for (int iter = 0; iter < itermax+1; iter++) {
+    if(iter > 0)
     cpu_timer_start(&tstart_cpu);
 
     mdfm_average_density_zero<<<nblocks, NTHREADS>>>(ncells, nmats,
@@ -419,6 +432,7 @@ void material_dominant_matrix(const int ncells, const bool memory_verbose,
     }
 #endif // if 0
 
+    if(iter > 0)
     time_sum += cpu_timer_stop(tstart_cpu);
   }
   double act_perf = time_sum * 1000.0 / itermax;
@@ -442,7 +456,8 @@ void material_dominant_matrix(const int ncells, const bool memory_verbose,
       (double *)genvector("Density_average", ncells, sizeof(double));
 
   time_sum = 0;
-  for (int iter = 0; iter < itermax; iter++) {
+  for (int iter = 0; iter < itermax+1; iter++) {
+    if(iter > 0)
     cpu_timer_start(&tstart_cpu);
 
     mdfm_average_density_zero<<<nblocks, NTHREADS>>>(ncells, nmats,
@@ -468,6 +483,7 @@ void material_dominant_matrix(const int ncells, const bool memory_verbose,
     }
 #endif // if 0
 
+    if(iter > 0)
     time_sum += cpu_timer_stop(tstart_cpu);
   }
   act_perf = time_sum * 1000.0 / itermax;
@@ -501,7 +517,8 @@ void material_dominant_matrix(const int ncells, const bool memory_verbose,
 
   //    Calculate pressure using ideal gas law
   time_sum = 0;
-  for (int iter = 0; iter < itermax; iter++) {
+  for (int iter = 0; iter < itermax+1; iter++) {
+    if(iter > 0)
     cpu_timer_start(&tstart_cpu);
 
     for (int m = 0; m < nmats; ++m) {
@@ -526,6 +543,7 @@ void material_dominant_matrix(const int ncells, const bool memory_verbose,
     }
 #endif // if 0
 
+    if(iter > 0)
     time_sum += cpu_timer_stop(tstart_cpu);
   }
   act_perf = time_sum * 1000.0 / itermax;
@@ -559,7 +577,8 @@ void material_dominant_matrix(const int ncells, const bool memory_verbose,
       (double **)genmatrix("MatDensity_average", nmats, ncells, sizeof(double));
 
   time_sum = 0;
-  for (int iter = 0; iter < itermax; iter++) {
+  for (int iter = 0; iter < itermax+1; iter++) {
+    if(iter > 0)
     cpu_timer_start(&tstart_cpu);
 
     for (int m = 0; m < nmats; ++m) {
@@ -607,6 +626,7 @@ void material_dominant_matrix(const int ncells, const bool memory_verbose,
     }
 #endif // if 0
 
+    if(iter > 0)
     time_sum += cpu_timer_stop(tstart_cpu);
   }
   act_perf = time_sum * 1000.0 / itermax;
@@ -693,7 +713,8 @@ void cell_dominant_compact(const int ncells, const bool memory_verbose,
   double time_sum = 0;
   struct timeval tstart_cpu;
   const int nblocks = ceil(ncells / (double)NTHREADS);
-  for (int iter = 0; iter < itermax; iter++) {
+  for (int iter = 0; iter < itermax+1; iter++) {
+    if(iter > 0)
     cpu_timer_start(&tstart_cpu);
 
     ccc_average_density<<<nblocks, NTHREADS>>>(
@@ -713,6 +734,7 @@ void cell_dominant_compact(const int ncells, const bool memory_verbose,
     }
 #endif // if 0
 
+    if(iter > 0)
     time_sum += cpu_timer_stop(tstart_cpu);
   }
   float act_perf = time_sum * 1000.0 / itermax;
@@ -737,7 +759,8 @@ void cell_dominant_compact(const int ncells, const bool memory_verbose,
 
   //    Average density with fractional densities using nmats
   time_sum = 0;
-  for (int iter = 0; iter < itermax; iter++) {
+  for (int iter = 0; iter < itermax+1; iter++) {
+    if(iter > 0)
     cpu_timer_start(&tstart_cpu);
 
     ccc_average_density_using_nmats<<<nblocks, NTHREADS>>>(
@@ -758,6 +781,7 @@ void cell_dominant_compact(const int ncells, const bool memory_verbose,
     }
 #endif // if 0
 
+    if(iter > 0)
     time_sum += cpu_timer_stop(tstart_cpu);
   }
   act_perf = time_sum * 1000.0 / itermax;
@@ -784,7 +808,8 @@ void cell_dominant_compact(const int ncells, const bool memory_verbose,
       (double *)genvector("Density_average", ncells, sizeof(double));
 
   time_sum = 0;
-  for (int iter = 0; iter < itermax; iter++) {
+  for (int iter = 0; iter < itermax+1; iter++) {
+    if(iter > 0)
     cpu_timer_start(&tstart_cpu);
 
     ccc_average_density_with_fractional<<<nblocks, NTHREADS>>>(
@@ -807,6 +832,7 @@ void cell_dominant_compact(const int ncells, const bool memory_verbose,
     }
 #endif // if 0
 
+    if(iter > 0)
     time_sum += cpu_timer_stop(tstart_cpu);
   }
   act_perf = time_sum * 1000.0 / itermax;
@@ -837,7 +863,8 @@ void cell_dominant_compact(const int ncells, const bool memory_verbose,
       (double *)genvector("Density_average", ncells, sizeof(double));
 
   time_sum = 0;
-  for (int iter = 0; iter < itermax; iter++) {
+  for (int iter = 0; iter < itermax+1; iter++) {
+    if(iter > 0)
     cpu_timer_start(&tstart_cpu);
 
     ccc_average_density_with_pure<<<nblocks, NTHREADS>>>(
@@ -860,6 +887,7 @@ void cell_dominant_compact(const int ncells, const bool memory_verbose,
     }
 #endif // if 0
 
+    if(iter > 0)
     time_sum += cpu_timer_stop(tstart_cpu);
   }
   act_perf = time_sum * 1000.0 / itermax;
@@ -888,7 +916,8 @@ void cell_dominant_compact(const int ncells, const bool memory_verbose,
 
   //   Calculate pressure using ideal gas law
   time_sum = 0;
-  for (int iter = 0; iter < itermax; iter++) {
+  for (int iter = 0; iter < itermax+1; iter++) {
+    if(iter > 0)
     cpu_timer_start(&tstart_cpu);
 
     ccc_pressure<<<nblocks, NTHREADS>>>(ncells, nmatconsts, imaterial, nextfrac,
@@ -913,6 +942,7 @@ void cell_dominant_compact(const int ncells, const bool memory_verbose,
     }
 #endif // if 0
 
+    if(iter > 0)
     time_sum += cpu_timer_stop(tstart_cpu);
   }
   act_perf = time_sum * 1000.0 / itermax;
@@ -941,12 +971,13 @@ void cell_dominant_compact(const int ncells, const bool memory_verbose,
       (double **)genmatrix("MatDensity_average", ncells, nmats, sizeof(double));
 
   time_sum = 0;
-  for (int iter = 0; iter < itermax; iter++) {
+  for (int iter = 0; iter < itermax+1; iter++) {
+    if(iter > 0)
     cpu_timer_start(&tstart_cpu);
 
     const int nblocks_cellsmats = ceil(ncells * nmats / (double)NTHREADS);
     ccc_mat_density_zero<<<nblocks, NTHREADS>>>(
-        ncells, nmats, m, (double *)(&MatDensity_average[0][0]));
+        ncells, nmats, (double *)(&MatDensity_average[0][0]));
 
     ccc_average_mat_density_neighbourhood<<<nblocks, NTHREADS>>>(
         ncells, nmats, imaterial, imaterialfrac, nextfrac, nnbrs, nbrs, cen_x,
@@ -1029,6 +1060,7 @@ void cell_dominant_compact(const int ncells, const bool memory_verbose,
     }
 #endif // if 0
 
+    if(iter > 0)
     time_sum += cpu_timer_stop(tstart_cpu);
   }
   act_perf = time_sum * 1000.0 / itermax;
@@ -1112,7 +1144,8 @@ void material_centric_compact(const int ncells, const bool memory_verbose,
   double time_sum = 0;
   struct timeval tstart_cpu;
   const int nblocks = ceil(ncells / (double)NTHREADS);
-  for (int iter = 0; iter < itermax; iter++) {
+  for (int iter = 0; iter < itermax+1; iter++) {
+    if(iter > 0)
     cpu_timer_start(&tstart_cpu);
 
     mcc_average_density_zero<<<nblocks, NTHREADS>>>(ncells, Density);
@@ -1141,6 +1174,7 @@ void material_centric_compact(const int ncells, const bool memory_verbose,
       Density[C] /= Vol[C];
 #endif // if 0
 
+    if(iter > 0)
     time_sum += cpu_timer_stop(tstart_cpu);
   }
   float act_perf = time_sum * 1000.0 / itermax;
@@ -1464,8 +1498,8 @@ void finish_sum_reduce(int nblocks1, double *reduce_array, double *result) {
   while (nblocks1 > 1) {
     int nblocks0 = nblocks1;
     nblocks1 = max(1, (int)ceil(nblocks1 / (double)NTHREADS));
-    sum_reduce<double, NTHREADS><<<nblocks1, NTHREADS>>>(
-        reduce_array, reduce_array, nblocks0);
+    sum_reduce<double, NTHREADS>
+        <<<nblocks1, NTHREADS>>>(reduce_array, reduce_array, nblocks0);
   }
   gpu_check(cudaDeviceSynchronize());
   cudaMemcpy(&result, &reduce_array, 1, cudaMemcpyDeviceToHost);

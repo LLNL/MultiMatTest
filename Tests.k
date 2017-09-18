@@ -436,7 +436,7 @@ __global__ void ccc_pressure(const int ncells, const double *nmatconsts,
 }
 
 __global__ void ccc_mat_density_zero(const int ncells, const int nmats,
-                                     const int m, double *MatDensity_average) {
+                                     double *MatDensity_average) {
   const int gid = blockIdx.x * blockDim.x + threadIdx.x;
   if (gid >= ncells * nmats) {
     return;
