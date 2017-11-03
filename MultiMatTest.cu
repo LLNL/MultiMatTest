@@ -73,6 +73,7 @@ int main(int argc, char **argv) {
 
   single_material(ncells, memory_verbose, itermax, nmatconst);
 
+#if 0
   cell_dominant_full_matrix(ncells, memory_verbose, itermax, nmatconst, method,
                             nmats, L_f, nnbrs_ave, nmatconsts, cen_x, cen_y,
                             nnbrs, nbrs);
@@ -80,6 +81,7 @@ int main(int argc, char **argv) {
   material_dominant_matrix(ncells, memory_verbose, itermax, nmatconst, method,
                            nmats, L_f, nnbrs_ave, nmatconsts, cen_x, cen_y,
                            nnbrs, nbrs);
+#endif // if 0
 
   cell_dominant_compact(ncells, memory_verbose, itermax, nmatconst, method,
                         nmats, L_f, nnbrs_ave, nmatconsts, cen_x, cen_y, nnbrs,
@@ -89,6 +91,7 @@ int main(int argc, char **argv) {
                            nmats, L_f, nnbrs_ave, nmatconsts, cen_x, cen_y,
                            nnbrs, nbrs);
 
+#if 0
   int *Cimaterial, *Cnmaterials, *Cimaterialfrac, *Cnextfrac, *Cfrac2cell;
   double *CVol, *CDensity, *CTemperature, *CPressure, *CVolfrac, *CDensityfrac,
       *CTemperaturefrac, *CPressurefrac;
@@ -168,6 +171,7 @@ int main(int argc, char **argv) {
   genvectorfree(CTemperaturefrac);
   genvectorfree(CPressurefrac);
   genvectorfree(nmatconsts);
+#endif // if 0
 }
 
 void setup_cell_dominant_data_structure(int method, double *&Vol,

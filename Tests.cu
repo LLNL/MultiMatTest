@@ -41,6 +41,7 @@ void single_material(const int ncells, const bool memory_verbose,
   double time_sum = 0.0;
   double density_ave = 0.0;
   const int nblocks = ceil(ncells / (double)NTHREADS);
+#if 0
   for (int iter = 0; iter < itermax+1; iter++) {
     if(iter > 0)
       cpu_timer_start(&tstart_cpu);
@@ -54,6 +55,7 @@ void single_material(const int ncells, const bool memory_verbose,
     if(iter > 0)
       time_sum += cpu_timer_stop(tstart_cpu);
   }
+#endif // if 0
   float act_perf = time_sum * 1000.0 / itermax;
   printf("Average Density of pure cells    %lf, compute time is %lf msecs\n",
          density_ave, act_perf);
@@ -138,6 +140,7 @@ void cell_dominant_full_matrix(const int ncells, const bool memory_verbose,
   double time_sum = 0.0;
   double density_ave = 0.0;
   const int nblocks = ceil(ncells / (double)NTHREADS);
+#if 0
   for (int iter = 0; iter < itermax+1; iter++) {
     if(iter > 0)
       cpu_timer_start(&tstart_cpu);
@@ -161,6 +164,7 @@ void cell_dominant_full_matrix(const int ncells, const bool memory_verbose,
     if(iter > 0) 
     time_sum += cpu_timer_stop(tstart_cpu);
   }
+#endif // if 0
   float act_perf = time_sum * 1000.0 / itermax;
   printf("Average Density of mixed material cells    compute time is %lf "
          "msecs\n",
@@ -179,6 +183,7 @@ void cell_dominant_full_matrix(const int ncells, const bool memory_verbose,
       (double *)genvector("Density_average", ncells, sizeof(double));
 
   time_sum = 0;
+#if 0
   for (int iter = 0; iter < itermax+1; iter++) {
     if(iter > 0)
       cpu_timer_start(&tstart_cpu);
@@ -204,6 +209,7 @@ void cell_dominant_full_matrix(const int ncells, const bool memory_verbose,
     if(iter > 0)
       time_sum += cpu_timer_stop(tstart_cpu);
   }
+#endif // if 0
   act_perf = time_sum * 1000.0 / itermax;
   printf("Average Density of frac with if            compute time is %lf "
          "msecs\n",
@@ -288,6 +294,7 @@ void cell_dominant_full_matrix(const int ncells, const bool memory_verbose,
       (double **)genmatrix("MatDensity_average", ncells, nmats, sizeof(double));
 
   time_sum = 0;
+#if 0
   for (int iter = 0; iter < itermax+1; iter++) {
     if(iter > 0)
     cpu_timer_start(&tstart_cpu);
@@ -335,6 +342,7 @@ void cell_dominant_full_matrix(const int ncells, const bool memory_verbose,
     if(iter > 0)
     time_sum += cpu_timer_stop(tstart_cpu);
   }
+#endif // if 0
   act_perf = time_sum * 1000.0 / itermax;
   printf("Average Material Density            compute time is %lf msecs\n",
          act_perf);
@@ -713,6 +721,7 @@ void cell_dominant_compact(const int ncells, const bool memory_verbose,
   double time_sum = 0;
   struct timeval tstart_cpu;
   const int nblocks = ceil(ncells / (double)NTHREADS);
+#if 0
   for (int iter = 0; iter < itermax+1; iter++) {
     if(iter > 0)
     cpu_timer_start(&tstart_cpu);
@@ -737,6 +746,7 @@ void cell_dominant_compact(const int ncells, const bool memory_verbose,
     if(iter > 0)
     time_sum += cpu_timer_stop(tstart_cpu);
   }
+#endif // if 0
   float act_perf = time_sum * 1000.0 / itermax;
   printf("Average Density of mixed material cells    compute time is %lf "
          "msecs\n",
@@ -759,6 +769,7 @@ void cell_dominant_compact(const int ncells, const bool memory_verbose,
 
   //    Average density with fractional densities using nmats
   time_sum = 0;
+#if 0
   for (int iter = 0; iter < itermax+1; iter++) {
     if(iter > 0)
     cpu_timer_start(&tstart_cpu);
@@ -784,6 +795,7 @@ void cell_dominant_compact(const int ncells, const bool memory_verbose,
     if(iter > 0)
     time_sum += cpu_timer_stop(tstart_cpu);
   }
+#endif // if 0
   act_perf = time_sum * 1000.0 / itermax;
   printf("Average Density of mixed material cells with nmats  compute time "
          "is %lf msecs\n",
@@ -808,6 +820,7 @@ void cell_dominant_compact(const int ncells, const bool memory_verbose,
       (double *)genvector("Density_average", ncells, sizeof(double));
 
   time_sum = 0;
+#if 0
   for (int iter = 0; iter < itermax+1; iter++) {
     if(iter > 0)
     cpu_timer_start(&tstart_cpu);
@@ -835,6 +848,7 @@ void cell_dominant_compact(const int ncells, const bool memory_verbose,
     if(iter > 0)
     time_sum += cpu_timer_stop(tstart_cpu);
   }
+#endif // if 0
   act_perf = time_sum * 1000.0 / itermax;
   printf("Average Density of mixed material cells    compute time is %lf "
          "msecs\n",
@@ -863,6 +877,7 @@ void cell_dominant_compact(const int ncells, const bool memory_verbose,
       (double *)genvector("Density_average", ncells, sizeof(double));
 
   time_sum = 0;
+#if 0
   for (int iter = 0; iter < itermax+1; iter++) {
     if(iter > 0)
     cpu_timer_start(&tstart_cpu);
@@ -890,6 +905,7 @@ void cell_dominant_compact(const int ncells, const bool memory_verbose,
     if(iter > 0)
     time_sum += cpu_timer_stop(tstart_cpu);
   }
+#endif // if 0
   act_perf = time_sum * 1000.0 / itermax;
   printf("Average Density of mixed materials cells pure filler  compute time "
          "is %lf msecs\n",
@@ -971,6 +987,7 @@ void cell_dominant_compact(const int ncells, const bool memory_verbose,
       (double **)genmatrix("MatDensity_average", ncells, nmats, sizeof(double));
 
   time_sum = 0;
+#if 0
   for (int iter = 0; iter < itermax+1; iter++) {
     if(iter > 0)
     cpu_timer_start(&tstart_cpu);
@@ -1063,6 +1080,7 @@ void cell_dominant_compact(const int ncells, const bool memory_verbose,
     if(iter > 0)
     time_sum += cpu_timer_stop(tstart_cpu);
   }
+#endif // if 0
   act_perf = time_sum * 1000.0 / itermax;
   printf("Average Material Density            compute time is %lf msecs\n",
          act_perf);
@@ -1144,6 +1162,7 @@ void material_centric_compact(const int ncells, const bool memory_verbose,
   double time_sum = 0;
   struct timeval tstart_cpu;
   const int nblocks = ceil(ncells / (double)NTHREADS);
+#if 0
   for (int iter = 0; iter < itermax+1; iter++) {
     if(iter > 0)
     cpu_timer_start(&tstart_cpu);
@@ -1177,6 +1196,7 @@ void material_centric_compact(const int ncells, const bool memory_verbose,
     if(iter > 0)
     time_sum += cpu_timer_stop(tstart_cpu);
   }
+#endif // if 0
   float act_perf = time_sum * 1000.0 / itermax;
   printf("Average Density of cells - Mat Dominant loop  -  compute time is "
          "%lf msecs\n",
@@ -1203,6 +1223,7 @@ void material_centric_compact(const int ncells, const bool memory_verbose,
 
   //    Average density with fractional densities - CELL-DOMINANT LOOP
   time_sum = 0;
+#if 0
   for (int iter = 0; iter < itermax; iter++) {
     cpu_timer_start(&tstart_cpu);
 
@@ -1225,6 +1246,7 @@ void material_centric_compact(const int ncells, const bool memory_verbose,
 
     time_sum += cpu_timer_stop(tstart_cpu);
   }
+#endif // if 0
   act_perf = time_sum * 1000.0 / itermax;
   printf("Average Density of cells - Cell Dominant loop  -  compute time is "
          "%lf msecs\n",
@@ -1302,6 +1324,7 @@ void material_centric_compact(const int ncells, const bool memory_verbose,
       (double **)genmatrix("MatDensity_average", nmats, ncells, sizeof(double));
 
   time_sum = 0;
+#if 0
   for (int iter = 0; iter < itermax; iter++) {
     cpu_timer_start(&tstart_cpu);
 
@@ -1358,9 +1381,11 @@ void material_centric_compact(const int ncells, const bool memory_verbose,
 
     time_sum += cpu_timer_stop(tstart_cpu);
   }
+#endif // if 0
   act_perf = time_sum * 1000.0 / itermax;
   printf("Average Material Density  -  compute time is %lf msecs\n", act_perf);
 
+#if 0
   memops8byte = ncells * nmats;
   memops8byte += (int64_t)24.5 * filled_fraction * ncells * nmats;
   memops8byte += (int64_t)8 * filled_fraction * ncells * nmats * nnbrs_ave;
@@ -1473,6 +1498,8 @@ void material_centric_compact(const int ncells, const bool memory_verbose,
   print_performance_estimates(act_perf, memops8byte, memops4byte, flops,
                               penalty_msecs);
 
+#endif // if 0
+#if 0
   genvectorfree((void *)nmatscell);
   genvectorfree((void *)matids);
   genvectorfree((void *)Vol);
@@ -1492,6 +1519,7 @@ void material_centric_compact(const int ncells, const bool memory_verbose,
   genvectorfree((void *)Pressurefrac);
   genvectorfree((void *)subset2mesh);
   genmatrixfree((void **)mesh2subset);
+#endif // if 0
 }
 
 void finish_sum_reduce(int nblocks1, double *reduce_array, double *result) {
