@@ -28,7 +28,7 @@
 bool verbose = false;
 bool memory_verbose = false;
 int itermax = 100;
-int ncells = (4096*4096);
+int ncells = (4096 * 4096);
 int nmats = 50;
 float model_error;
 
@@ -73,6 +73,7 @@ int main(int argc, char **argv) {
 
   single_material(ncells, memory_verbose, itermax, nmatconst);
 
+#if 0
   cell_dominant_full_matrix(ncells, memory_verbose, itermax, nmatconst, method,
                             nmats, L_f, nnbrs_ave, nmatconsts, cen_x, cen_y,
                             nnbrs, nbrs);
@@ -80,6 +81,7 @@ int main(int argc, char **argv) {
   material_dominant_matrix(ncells, memory_verbose, itermax, nmatconst, method,
                            nmats, L_f, nnbrs_ave, nmatconsts, cen_x, cen_y,
                            nnbrs, nbrs);
+#endif // if 0
 
   cell_dominant_compact(ncells, memory_verbose, itermax, nmatconst, method,
                         nmats, L_f, nnbrs_ave, nmatconsts, cen_x, cen_y, nnbrs,
@@ -266,7 +268,7 @@ void setup_cell_dominant_compact_data_structure(
   double **Volfrac_fullcc; // full cell-centric matrix of fractional volumes
   get_vol_frac_matrix(method, Volfrac_fullcc, filled_percentage);
 
-  int* tix = (int*)genvector("tix", ncells+1, sizeof(int));
+  int *tix = (int *)genvector("tix", ncells + 1, sizeof(int));
   tix[0] = 0;
 
   int ix0 = 0;
@@ -277,9 +279,9 @@ void setup_cell_dominant_compact_data_structure(
         nnz++;
     }
 
-    tix[ic+1] = tix[ic];
-    if(nnz > 1)
-      tix[ic+1]+=nnz;
+    tix[ic + 1] = tix[ic];
+    if (nnz > 1)
+      tix[ic + 1] += nnz;
 
     if (nnz > 1)
       ix0 += nnz;
