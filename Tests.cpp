@@ -375,18 +375,19 @@ void cell_dominant_compact(const int ncells, const bool memory_verbose,
       for (int m = 0; m < nmats; m++)
         MatDensity_average[ic][m] = 0.0;
 
-      double xc[2];
-      xc[0] = cen_x[ic];
-      xc[1] = cen_y[ic];
       int nn = nnbrs[ic];
       int cnbrs[8];
       double dsqr[8];
-      for (int n = 0; n < nn; n++)
-        cnbrs[n] = nbrs[ic][n];
       for (int n = 0; n < nn; n++) {
-        dsqr[n] = 0.0;
-        double ddist = (xc[0] - cen_x[cnbrs[n]]);
-        dsqr[n] += ddist * ddist;
+        cnbrs[n] = nbrs[ic][n];
+        // I think this is meant to the squared distance, but the original 
+        // formula didn't actually use y so I believe it was optimised out...
+        dsqr[n] = (cen_x[ic] - cen_x[cnbrs[n]]);
+
+        // Presumably the formula is meant to be something like:
+        // double x = (cen_x[ic] - cen_x[cnbrs[n]]);
+        // double y = (cen_y[ic] - cen_y[cnbrs[n]]);
+        // dsqr[n] = x*x+y*y;
       }
 
       int ix = imaterial[ic];
@@ -449,16 +450,39 @@ void cell_dominant_compact(const int ncells, const bool memory_verbose,
   printf("Average Material Density            compute time is %lf msecs\n",
          act_perf);
 
+  filled_fraction = filled_percentage / 100.0;
+
+  int sparse_mat_accesses = 0;
+  for(int cc = 0; cc < ncells; ++cc) {
+    for(int mm = 0; mm < nmats; ++mm) {
+      if(MatDensity_average[cc][mm] > 0.0) {
+        sparse_mat_accesses++;
+      }
+    }
+  }
+
   genmatrixfree((void **)MatDensity_average);
 
-  filled_fraction = filled_percentage / 100.0;
+
   // Formula differs a bit from paper because it is 2D here
+  memops8byte = ncells*nmats; // MatDensity_average
+  memops4byte = ncells;  // nnbrs
+  memops4byte += nnbrs_ave; // nbrs
+  memops8byte += nnbrs_ave; // cen_x (assuming perfect caching...)
+  memops4byte += ncells;    // imaterial
+  memops4byte += 2*nmixlength;  // nextfrac, imaterialfrac
+  memops8byte += sparse_mat_accesses; // densityfrac
+  memops8byte += nmixlength;
+
+#if 0
   int64_t memops = (int64_t)(2.5 * ncells * (1 + nnbrs_ave) + 0.5 * nmixlength);
   memops += (int64_t)(ncells * nmats * (1 + 1.5 * filled_fraction));
   memops += (int64_t)(4 * filled_fraction * ncells * nmats * nnbrs_ave);
   memops +=
       (int64_t)(8 * filled_fraction * ncells * nmats * nnbrs_ave * nmats_ave);
   memops += (int64_t)(8 * filled_fraction * ncells * nmats * nnbrs_ave * L_f);
+#endif // if 0
+
   flops = 6 * ncells * nnbrs_ave;
   flops += (int64_t)(3 * filled_fraction * ncells * nmats * nnbrs_ave * L_f);
   flops += (int64_t)(filled_fraction * ncells * nmats);
@@ -471,7 +495,7 @@ void cell_dominant_compact(const int ncells, const bool memory_verbose,
   // for a 2.7 GHz processor
   penalty_msecs = 1000.0 * cache_miss_freq * (branch_wait + cache_wait) *
                   mixed_cell_fraction * ncells;
-  print_performance_estimates(act_perf, memops, 0, flops, penalty_msecs);
+  print_performance_estimates(act_perf, memops8byte, memops4byte, flops, penalty_msecs);
 
   genvectorfree(imaterial);
   genvectorfree(nmaterials);
