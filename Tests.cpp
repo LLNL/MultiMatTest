@@ -227,7 +227,6 @@ void cell_dominant_compact(const int ncells, const bool memory_verbose,
     for (int ic = 0; ic < ncells; ic++) {
       int ix = imaterial[ic];
       double density_ave = 0.0;
-#if 0
       if (ix <= 0) { // material numbers for clean cells start at 1
         for (ix = -ix; ix >= 0; ix = nextfrac[ix]) {
           density_ave += Densityfrac[ix] * Volfrac[ix] / Vol[ic];
@@ -236,14 +235,6 @@ void cell_dominant_compact(const int ncells, const bool memory_verbose,
         density_ave = Density[ic];
       }
       Density_average[ic] = density_ave;
-#endif // if 0
-
-      // NOTE: It is faster to avoid a branch here as the loop is 
-      // automatically skipped anyway!
-      for (ix = -ix; ix >= 0; ix = nextfrac[ix]) {
-        density_ave += Densityfrac[ix] * Volfrac[ix] / Vol[ic];
-      }
-      Density_average[ic] = (ix <= 0) ? density_ave : Density[ic];
     }
 
     time_sum += cpu_timer_stop(tstart_cpu);
@@ -382,7 +373,8 @@ void cell_dominant_compact(const int ncells, const bool memory_verbose,
         cnbrs[n] = nbrs[ic][n];
         // I think this is meant to the squared distance, but the original 
         // formula didn't actually use y so I believe it was optimised out...
-        dsqr[n] = (cen_x[ic] - cen_x[cnbrs[n]]);
+        double dist = (cen_x[ic] - cen_x[cnbrs[n]]);
+        dsqr[n] = dist*dist;
 
         // Presumably the formula is meant to be something like:
         // double x = (cen_x[ic] - cen_x[cnbrs[n]]);
@@ -690,9 +682,6 @@ void material_centric_compact(const int ncells, const bool memory_verbose,
 #pragma omp parallel for
       for (int c = 0; c < ncellsmat[m]; c++) { // Note that this is c not C
         int C = subset2mesh[m][c];
-        double xc[2];
-        xc[0] = cen_x[C];
-        xc[1] = cen_y[C];
         int nn = nnbrs[C];
         int cnbrs[9];
         double dsqr[8];
@@ -701,9 +690,8 @@ void material_centric_compact(const int ncells, const bool memory_verbose,
           cnbrs[n] = nbrs[C][n];
 #pragma omp simd
         for (int n = 0; n < nn; n++) {
-          dsqr[n] = 0.0;
-          double ddist = (xc[0] - cen_x[cnbrs[n]]);
-          dsqr[n] += ddist * ddist;
+          double ddist = (cen_x[C] - cen_x[cnbrs[n]]);
+          dsqr[n] = ddist * ddist;
         }
 
         int nnm = 0; // number of nbrs with this material
@@ -736,6 +724,7 @@ void material_centric_compact(const int ncells, const bool memory_verbose,
   penalty_msecs = 0.0;
   print_performance_estimates(act_perf, memops8byte, memops4byte, flops,
                               penalty_msecs);
+
 //   Convert from MATERIAL-CENTRIC COMPACT DATA STRUCTURE to CELL_CENTRIC
 //   COMPACT DATA STRUCTURE
 //#define CONVERSION_CHECK 1
