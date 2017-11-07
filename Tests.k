@@ -105,20 +105,22 @@ ccc_average_density_with_fractional(const int ncells, const int *imaterial,
   // Coalesced read
   double density_ave = 0.0;
   int ix = imaterial[ic];
-  for (ix = -ix; ix >= 0; ix = nextfrac[ix]) {
-    // Uncoalesced reads...
-    density_ave += Densityfrac[ix] * Volfrac[ix] / Vol[ic];
+  if(ix <= 0) {
+    for (ix = -ix; ix >= 0; ix = nextfrac[ix]) {
+      density_ave += Densityfrac[ix] * Volfrac[ix] / Vol[ic];
+    }
+    Density_average[ic] = density_ave;
   }
-
-  // Coalesced read / write
-  Density_average[ic] = (ix <= 0) ? density_ave : Density[ic];
+  else {
+    Density_average[ic] = Density[ic];
+  }
 }
 
 __global__ void
 ccc_average_density_with_pure(const int ncells, const int *imaterial,
-                              const int *nextfrac, double *Density,
-                              double *Densityfrac, double *Volfrac,
-                              double *Density_average, double *Vol) {
+    const int *nextfrac, double *Density,
+    double *Densityfrac, double *Volfrac,
+    double *Density_average, double *Vol) {
   const int ic = blockIdx.x * blockDim.x + threadIdx.x;
 
   if (ic >= ncells) {
@@ -145,12 +147,12 @@ ccc_average_density_with_pure(const int ncells, const int *imaterial,
 }
 
 __global__ void ccc_pressure(const int ncells, const double *nmatconsts,
-                             const int *imaterial, const int *nextfrac,
-                             const int *imaterialfrac, double *Density,
-                             double *Densityfrac, double *Volfrac,
-                             double *Pressurefrac, double *Pressure,
-                             double *Vol, double *Temperaturefrac,
-                             double *Temperature) {
+    const int *imaterial, const int *nextfrac,
+    const int *imaterialfrac, double *Density,
+    double *Densityfrac, double *Volfrac,
+    double *Pressurefrac, double *Pressure,
+    double *Vol, double *Temperaturefrac,
+    double *Temperature) {
   const int ic = blockIdx.x * blockDim.x + threadIdx.x;
 
   if (ic >= ncells) {
@@ -168,7 +170,7 @@ __global__ void ccc_pressure(const int ncells, const double *nmatconsts,
       // Uncoalesced reads / writes
       int m = imaterialfrac[ix];
       Pressurefrac[ix] =
-          (nmatconsts[m] * Densityfrac[ix] * Temperaturefrac[ix]) / Volfrac[ix];
+        (nmatconsts[m] * Densityfrac[ix] * Temperaturefrac[ix]) / Volfrac[ix];
     }
   } else {
     // Coalesced reads / writes, except nmatconsts
@@ -177,7 +179,7 @@ __global__ void ccc_pressure(const int ncells, const double *nmatconsts,
 }
 
 __global__ void ccc_mat_density_zero(const int ncells, const int nmats,
-                                     double *MatDensity_average) {
+    double *MatDensity_average) {
   const int gid = blockIdx.x * blockDim.x + threadIdx.x;
   if (gid >= ncells * nmats) {
     return;
@@ -301,10 +303,10 @@ __global__ void mcc_average_density_zero(const int ncells, double *Density) {
 }
 
 __global__ void mcc_average_density_fractional(const int ncm, const int m,
-                                               int **subset2mesh,
-                                               double **Densityfrac,
-                                               double **Volfrac,
-                                               double *Density) {
+    int **subset2mesh,
+    double **Densityfrac,
+    double **Volfrac,
+    double *Density) {
 
   const int c = blockIdx.x * blockDim.x + threadIdx.x;
   if (c >= ncm) {
@@ -316,10 +318,10 @@ __global__ void mcc_average_density_fractional(const int ncm, const int m,
 }
 
 __global__ void mcc_average_density_by_cell(const int ncells, const int *matids,
-                                            int **mesh2subset, int *nmatscell,
-                                            double **Densityfrac,
-                                            double **Volfrac, double *Density,
-                                            double *Vol) {
+    int **mesh2subset, int *nmatscell,
+    double **Densityfrac,
+    double **Volfrac, double *Density,
+    double *Vol) {
   const int C = blockIdx.x * blockDim.x + threadIdx.x;
 
   if (C >= ncells) {
@@ -355,8 +357,8 @@ __global__ void mcc_average_density_by_matrix(
 
 __global__ void
 mcc_pressure_by_material(const int ncm, const int m, const double nmatconst,
-                         double **Pressurefrac, double **Densityfrac,
-                         double **Temperaturefrac, double **Volfrac) {
+    double **Pressurefrac, double **Densityfrac,
+    double **Temperaturefrac, double **Volfrac) {
   const int c = blockIdx.x * blockDim.x + threadIdx.x;
 
   if (c >= ncm) {
@@ -364,7 +366,7 @@ mcc_pressure_by_material(const int ncm, const int m, const double nmatconst,
   }
 
   Pressurefrac[m][c] =
-      (nmatconst * Densityfrac[m][c] * Temperaturefrac[m][c]) / Volfrac[m][c];
+    (nmatconst * Densityfrac[m][c] * Temperaturefrac[m][c]) / Volfrac[m][c];
 }
 
 __global__ void mcc_average_density_by_neighbourhood(
@@ -407,7 +409,7 @@ __global__ void mcc_average_density_by_neighbourhood(
 }
 
 __global__ void mcc_mat_density_zero(const int ncells, const int nmats,
-                                     double *MatDensity_average) {
+    double *MatDensity_average) {
   const int gid = blockIdx.x * blockDim.x + threadIdx.x;
   if (gid >= ncells * nmats) {
     return;
@@ -417,10 +419,10 @@ __global__ void mcc_mat_density_zero(const int ncells, const int nmats,
 }
 
 __global__ void cdfm_average_density(const int ncells, const int nmats,
-                                     const double *Density, const double *Vol,
-                                     double **Densityfrac, double **Volfrac,
-                                     double *ReduceArray,
-                                     double *Density_average) {
+    const double *Density, const double *Vol,
+    double **Densityfrac, double **Volfrac,
+    double *ReduceArray,
+    double *Density_average) {
   const int tid = threadIdx.x;
   const int ic = blockIdx.x * blockDim.x + tid;
 
@@ -445,9 +447,9 @@ __global__ void cdfm_average_density(const int ncells, const int nmats,
 
 __global__ void
 cdfm_average_density_with_if(const int ncells, const int nmats,
-                             const double *Density, const double *Vol,
-                             double **Densityfrac, double **Volfrac,
-                             double *ReduceArray, double *Density_average) {
+    const double *Density, const double *Vol,
+    double **Densityfrac, double **Volfrac,
+    double *ReduceArray, double *Density_average) {
   const int tid = threadIdx.x;
   const int ic = blockIdx.x * blockDim.x + tid;
 
@@ -473,9 +475,9 @@ cdfm_average_density_with_if(const int ncells, const int nmats,
 }
 
 __global__ void cdfm_pressure(const int ncells, const int nmats,
-                              const double *nmatconsts, double **Volfrac,
-                              double **Pressurefrac, double **Densityfrac,
-                              double **Temperaturefrac) {
+    const double *nmatconsts, double **Volfrac,
+    double **Pressurefrac, double **Densityfrac,
+    double **Temperaturefrac) {
   const int ic = blockIdx.x * blockDim.x + threadIdx.x;
 
   if (ic >= ncells) {
@@ -486,8 +488,8 @@ __global__ void cdfm_pressure(const int ncells, const int nmats,
     // Uncoalesced read
     if (Volfrac[ic][m] > 0.0) {
       Pressurefrac[ic][m] =
-          (nmatconsts[m] * Densityfrac[ic][m] * Temperaturefrac[ic][m]) /
-          (Volfrac[ic][m]);
+        (nmatconsts[m] * Densityfrac[ic][m] * Temperaturefrac[ic][m]) /
+        (Volfrac[ic][m]);
     } else {
       // Uncoalesced write
       Pressurefrac[ic][m] = 0.0;
@@ -547,7 +549,7 @@ __global__ void cdfm_average_density_neighbourhood(
 }
 
 __global__ void mdfm_average_density_zero(const int ncells, const int nmats,
-                                          double *Density_average) {
+    double *Density_average) {
   const int ic = blockIdx.x * blockDim.x + threadIdx.x;
 
   if (ic >= ncells) {
@@ -559,9 +561,9 @@ __global__ void mdfm_average_density_zero(const int ncells, const int nmats,
 }
 
 __global__ void mdfm_average_density(const int ncells, const int nmats,
-                                     const int m, double *Density_average,
-                                     double **Densityfrac, double **Volfrac,
-                                     double *Vol) {
+    const int m, double *Density_average,
+    double **Densityfrac, double **Volfrac,
+    double *Vol) {
   const int ic = blockIdx.x * blockDim.x + threadIdx.x;
 
   if (ic >= ncells) {
@@ -573,10 +575,10 @@ __global__ void mdfm_average_density(const int ncells, const int nmats,
 }
 
 __global__ void mdfm_average_density_with_if(const int ncells, const int nmats,
-                                             const int m,
-                                             double *Density_average,
-                                             double **Densityfrac,
-                                             double **Volfrac, double *Vol) {
+    const int m,
+    double *Density_average,
+    double **Densityfrac,
+    double **Volfrac, double *Vol) {
   const int ic = blockIdx.x * blockDim.x + threadIdx.x;
   if (ic >= ncells) {
     return;
@@ -591,9 +593,9 @@ __global__ void mdfm_average_density_with_if(const int ncells, const int nmats,
 }
 
 __global__ void mdfm_pressure(const int ncells, const int nmats, const int m,
-                              const double *nmatconsts, double **Volfrac,
-                              double **Pressurefrac, double **Densityfrac,
-                              double **Temperaturefrac) {
+    const double *nmatconsts, double **Volfrac,
+    double **Pressurefrac, double **Densityfrac,
+    double **Temperaturefrac) {
   const int ic = blockIdx.x * blockDim.x + threadIdx.x;
   if (ic >= ncells) {
     return;
@@ -604,8 +606,8 @@ __global__ void mdfm_pressure(const int ncells, const int nmats, const int m,
 
     // Coalesced sparse writes
     Pressurefrac[m][ic] =
-        (nmatconsts[m] * Densityfrac[m][ic] * Temperaturefrac[m][ic]) /
-        Volfrac[m][ic];
+      (nmatconsts[m] * Densityfrac[m][ic] * Temperaturefrac[m][ic]) /
+      Volfrac[m][ic];
   } else {
 
     // Coalesced sparse write
