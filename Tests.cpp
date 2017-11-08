@@ -556,10 +556,6 @@ void material_centric_compact(const int ncells, const bool memory_verbose,
       }
     }
 
-#pragma omp parallel for
-    for (int C = 0; C < ncells; C++)
-      Density[C] /= Vol[C];
-
     time_sum += cpu_timer_stop(tstart_cpu);
   }
   float act_perf = time_sum * 1000.0 / itermax;
