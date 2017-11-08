@@ -714,11 +714,23 @@ void material_centric_compact(const int ncells, const bool memory_verbose,
   act_perf = time_sum * 1000.0 / itermax;
   printf("Average Material Density  -  compute time is %lf msecs\n", act_perf);
 
+  memops8byte = ncells*nmats;       // MatDensity_average
+  memops4byte = nmats;              // ncells_mat
+  memops4byte += ncells*nmats;      // subset2mesh
+  memops4byte += nmats*ncells;      // mesh2subset
+  memops8byte += nmats*ncells;      // Densityfrac
+  memops8byte += nmats*ncells;      // MatDensity_average
+  memops4byte += ncells*nnbrs_ave;  // nbrs
+  memops8byte += ncells;            // cen_x
+
+#if 0
   memops8byte = ncells * nmats;
   memops8byte += (int64_t)24.5 * filled_fraction * ncells * nmats;
   memops8byte += (int64_t)8 * filled_fraction * ncells * nmats * nnbrs_ave;
   memops8byte +=
       (int64_t)17 * filled_fraction * ncells * nmats * nnbrs_ave * L_f;
+#endif // if 0
+
   flops = (int64_t)8 * filled_fraction * ncells * nmats * nnbrs_ave * L_f;
   flops += (int64_t)filled_fraction * ncells * nmats;
   penalty_msecs = 0.0;
