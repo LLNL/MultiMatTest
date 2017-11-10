@@ -110,7 +110,7 @@ ccc_average_density_with_fractional(const int ncells, const int *imaterial,
       density_ave += Densityfrac[ix] * Volfrac[ix];
     }
   }
-  Density_average[ic] = (ix <= 0) ? density_ave/ Vol[ic] : Density[ic];
+  Density_average[ic] = (imaterial[ic] <= 0) ? density_ave/ Vol[ic] : Density[ic];
 }
 
 __global__ void
