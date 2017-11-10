@@ -21,6 +21,8 @@
 #include <sys/queue.h>
 #include <sys/types.h>
 
+#define ALIGN (2*1024*1024)
+
 #ifndef DEBUG
 #define DEBUG 0
 #endif
@@ -41,7 +43,7 @@ void *genvector_p(const char *name, int inum, size_t elsize, const char *file,
   size_t mem_size;
 
   mem_size = inum * elsize;
-  out = (void *)malloc((size_t)inum * elsize);
+  out = (void *)_mm_malloc((size_t)inum * elsize, ALIGN);
   genmalloc_memory_add(out, name, mem_size);
 
   return (out);
@@ -59,11 +61,11 @@ void **genmatrix_p(const char *name, int jnum, int inum, size_t elsize,
   sprintf((char *)ptr_name, "%s ptr", name);
 
   mem_size = jnum * sizeof(void *);
-  out = (void **)malloc(mem_size);
+  out = (void **)_mm_malloc(mem_size, ALIGN);
   genmalloc_memory_add(out, ptr_name, mem_size);
 
   mem_size = jnum * inum * elsize;
-  out[0] = (void **)malloc((size_t)jnum * (size_t)inum * elsize);
+  out[0] = (void **)_mm_malloc((size_t)jnum * (size_t)inum * elsize, ALIGN);
   genmalloc_memory_add(out[0], name, mem_size);
 
   for (int i = 1; i < jnum; i++) {
@@ -86,16 +88,16 @@ void ***gentrimatrix_p(const char *name, int knum, int jnum, int inum,
   sprintf((char *)ptr_name, "%s ptr", name);
 
   mem_size = knum * sizeof(void **);
-  out = (void ***)malloc(mem_size);
+  out = (void ***)_mm_malloc(mem_size, ALIGN);
   genmalloc_memory_add(out, ptr_name, mem_size);
 
   mem_size = knum * jnum * sizeof(void *);
-  out[0] = (void **)malloc(mem_size);
+  out[0] = (void **)_mm_malloc(mem_size, ALIGN);
   genmalloc_memory_add(out[0], ptr_name, mem_size);
 
   mem_size = knum * jnum * inum * elsize;
   out[0][0] =
-      (void *)malloc((size_t)knum * (size_t)jnum * (size_t)inum * elsize);
+      (void *)_mm_malloc((size_t)knum * (size_t)jnum * (size_t)inum * elsize, ALIGN);
   genmalloc_memory_add(out[0][0], name, mem_size);
 
   for (int k = 0; k < knum; k++) {
@@ -124,10 +126,10 @@ void *genmalloc_memory_add_p(void *malloc_mem_ptr, const char *name,
     SLIST_INIT(&genmalloc_memory_head);
 
   genmalloc_memory_item =
-      (genmalloc_memory_entry *)malloc(sizeof(struct genmalloc_memory_entry));
+      (genmalloc_memory_entry *)_mm_malloc(sizeof(struct genmalloc_memory_entry), ALIGN);
   genmalloc_memory_item->mem_ptr = malloc_mem_ptr;
   genmalloc_memory_item->mem_size = size;
-  genmalloc_memory_item->name = strcpy((char *)malloc(strlen(name) + 1), name);
+  genmalloc_memory_item->name = strcpy((char *)_mm_malloc(strlen(name) + 1, ALIGN), name);
   if (DEBUG)
     printf("GENMALLOC_MEMORY_ADD: DEBUG -- malloc memory pointer is %p\n",
            malloc_mem_ptr);
@@ -147,11 +149,11 @@ void genmalloc_memory_remove_p(void *malloc_mem_ptr, const char *file,
         printf("GENMALLOC_MEMORY_REMOVE: DEBUG -- freeing malloc memory "
                "pointer %p\n",
                malloc_mem_ptr);
-      free(malloc_mem_ptr);
-      free(genmalloc_memory_item->name);
+      _mm_free(malloc_mem_ptr);
+      _mm_free(genmalloc_memory_item->name);
       SLIST_REMOVE(&genmalloc_memory_head, genmalloc_memory_item,
                    genmalloc_memory_entry, genmalloc_memory_entries);
-      free(genmalloc_memory_item);
+      _mm_free(genmalloc_memory_item);
       break;
     }
   }
@@ -203,9 +205,9 @@ void genmem_free_all_p(const char *file, const int line) {
     if (DEBUG)
       printf("GENMEM_FREE_ALL: DEBUG -- freeing genmalloc memory %p\n",
              genmalloc_memory_item->mem_ptr);
-    free(genmalloc_memory_item->mem_ptr);
-    free(genmalloc_memory_item->name);
+    _mm_free(genmalloc_memory_item->mem_ptr);
+    _mm_free(genmalloc_memory_item->name);
     SLIST_REMOVE_HEAD(&genmalloc_memory_head, genmalloc_memory_entries);
-    free(genmalloc_memory_item);
+    _mm_free(genmalloc_memory_item);
   }
 }

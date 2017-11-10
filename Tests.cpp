@@ -229,12 +229,13 @@ void cell_dominant_compact(const int ncells, const bool memory_verbose,
       double density_ave = 0.0;
       if (ix <= 0) { // material numbers for clean cells start at 1
         for (ix = -ix; ix >= 0; ix = nextfrac[ix]) {
-          density_ave += Densityfrac[ix] * Volfrac[ix] / Vol[ic];
+          density_ave += Densityfrac[ix] * Volfrac[ix];
         }
-      } else {
-        density_ave = Density[ic];
+      Density_average[ic] = density_ave/Vol[ic];
+      } 
+      else {
+        Density_average[ic] = Density[ic];
       }
-      Density_average[ic] = density_ave;
     }
 
     time_sum += cpu_timer_stop(tstart_cpu);
