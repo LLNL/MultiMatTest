@@ -417,7 +417,7 @@ void cell_dominant_compact(const int ncells, const bool memory_verbose,
 
     ccc_average_mat_density_neighbourhood<<<nblocks, NTHREADS>>>(
         ncells, nmats, imaterial, imaterialfrac, nextfrac, nnbrs, nbrs, cen_x,
-        cen_y, Volfrac, Densityfrac, MatDensity_average);
+        cen_y, Volfrac, Densityfrac, (double *)(&MatDensity_average[0][0]));
     gpu_check(cudaDeviceSynchronize());
 
 #if 0
@@ -588,6 +588,7 @@ void material_centric_compact(const int ncells, const bool memory_verbose,
   genmalloc_MB_memory_total();
   printf("\n");
 
+  
   //    Average density with fractional densities - MAT-DOMINANT LOOP
   double time_sum = 0;
   struct timeval tstart_cpu;
@@ -597,15 +598,15 @@ void material_centric_compact(const int ncells, const bool memory_verbose,
       cpu_timer_start(&tstart_cpu);
 
     mcc_average_density_zero<<<nblocks, NTHREADS>>>(ncells, Density);
-    gpu_check(cudaDeviceSynchronize());
 
     for (int m = 0; m < nmats; m++) {
       const int ncm = ncellsmat[m];
-      const int nblocks = ceil(ncm / (double)NTHREADS);
-      mcc_average_density_fractional<<<nblocks, NTHREADS>>>(
-          ncm, m, subset2mesh, Densityfrac, Volfrac, Density);
-      gpu_check(cudaDeviceSynchronize());
+      const int nbl = ceil(ncm / (double)NTHREADS);
+      mcc_average_density_fractional<<<nbl, NTHREADS>>>(
+          ncm, subset2mesh[m], Densityfrac[m], Volfrac[m], Density, Vol);
     }
+    mcc_average_density_by_vol<<<nblocks, NTHREADS>>>(ncells, Density, Vol);
+    gpu_check(cudaDeviceSynchronize());
 
 #if 0
     for (int C = 0; C < ncells; C++)
@@ -630,18 +631,22 @@ void material_centric_compact(const int ncells, const bool memory_verbose,
       "%lf msecs\n",
       act_perf);
 
-  float ninner = 0.0; // number of times inner loop executed
+  int64_t ninner = 0; // number of times inner loop executed
   for (int m = 0; m < nmats; m++)
-    for (int c = 0; c < ncellsmat[m]; c++)
-      ninner++;
+    ninner += ncellsmat[m];
   int64_t memops8byte = ncells; // Initialization of Density
+  memops8byte += 2*ninner;
+  memops8byte += 3*ncells;
+  int64_t memops4byte = ninner; // load subset2mesh
+
+#if 0
   memops8byte += (int64_t)(8 * cache_miss_freq + (1 - cache_miss_freq)) *
     ninner;        // load Density (cache miss, reload 8 doubles)
   memops8byte += 2 * ninner;    // load Densityfrac, Volfrac
   memops8byte += ninner;        // store Density
   memops8byte += ncells;        // load cell volume, Vol
   memops8byte += 2 * ncells;    // Load and Store Density
-  int64_t memops4byte = ninner; // load subset2mesh
+#endif // if 0
   int64_t flops = 2 * ninner;   // multiply and add
   flops += ncells;              // divide cell density by cell volume
   float penalty_msecs =
@@ -651,13 +656,16 @@ void material_centric_compact(const int ncells, const bool memory_verbose,
 
   //    Average density with fractional densities - CELL-DOMINANT LOOP
   time_sum = 0;
-  for (int iter = 0; iter < itermax; iter++) {
+  for (int iter = 0; iter < itermax+1; iter++) {
+    if(iter > 0)
     cpu_timer_start(&tstart_cpu);
 
+#if 0
     mcc_average_density_by_cell<<<nblocks, NTHREADS>>>(
         ncells, matids, mesh2subset, nmatscell, Densityfrac, Volfrac, Density,
         Vol);
     gpu_check(cudaDeviceSynchronize());
+#endif // if 0
 
 #if 0
     for (int C = 0; C < ncells; C++) {
@@ -671,6 +679,7 @@ void material_centric_compact(const int ncells, const bool memory_verbose,
     }
 #endif // if 0
 
+    if(iter > 0)
     time_sum += cpu_timer_stop(tstart_cpu);
   }
   act_perf = time_sum * 1000.0 / itermax;
@@ -701,17 +710,19 @@ void material_centric_compact(const int ncells, const bool memory_verbose,
 
   //   Calculate pressure using ideal gas law - MAT-CENTRIC COMPACT STRUCTURE
   time_sum = 0;
-  for (int iter = 0; iter < itermax; iter++) {
-    cpu_timer_start(&tstart_cpu);
+  for (int iter = 0; iter < itermax+1; iter++) {
+    if(iter > 0)
+      cpu_timer_start(&tstart_cpu);
 
+#if 0
     for (int m = 0; m < nmats; m++) {
       const int ncm = ncellsmat[m];
       const int nblocks = ceil(ncm / (double)NTHREADS);
-      mcc_pressure_by_material<<<nblocks, NTHREADS>>>(ncm, m, nmatconst,
-          Pressurefrac, Densityfrac,
-          Temperaturefrac, Volfrac);
-      gpu_check(cudaDeviceSynchronize());
+      mcc_pressure_by_material<<<nblocks, NTHREADS>>>(ncm, nmatconst,
+          Pressurefrac[m], Densityfrac[m], Temperaturefrac[m], Volfrac[m]);
     }
+    gpu_check(cudaDeviceSynchronize());
+#endif // if 0
 
 #if 0
     for (int m = 0; m < nmats; m++) {
@@ -724,17 +735,20 @@ void material_centric_compact(const int ncells, const bool memory_verbose,
     }
 #endif // if 0
 
-    time_sum += cpu_timer_stop(tstart_cpu);
+    if(iter > 0)
+      time_sum += cpu_timer_stop(tstart_cpu);
   }
   act_perf = time_sum * 1000.0 / itermax;
   printf("Pressure Calculation of cells - Mat-Centric -  compute time is %lf "
       "msecs\n",
       act_perf);
 
+
   ninner = 0;
-  for (int m = 0; m < nmats; m++)
-    for (int c = 0; c < ncellsmat[m]; c++)
-      ninner++;
+  for (int m = 0; m < nmats; m++){
+    ninner += ncellsmat[m];
+  }
+
   memops4byte = 0;
   memops8byte = nmats;       // load of nmatsconsts
   memops8byte += 3 * ninner; // load DensityFrac, TemperatureFrac, VolFrac
@@ -745,12 +759,14 @@ void material_centric_compact(const int ncells, const bool memory_verbose,
   print_performance_estimates(act_perf, memops8byte, memops4byte, flops,
       penalty_msecs);
 
+
   //    Average material density over neighborhood of each cell
   double **MatDensity_average =
     (double **)genmatrix("MatDensity_average", nmats, ncells, sizeof(double));
 
   time_sum = 0;
-  for (int iter = 0; iter < itermax; iter++) {
+  for (int iter = 0; iter < itermax+1; iter++) {
+    if(iter > 0)
     cpu_timer_start(&tstart_cpu);
 
     const int nblocks_cellsmats = ceil(ncells * nmats / (double)NTHREADS);
@@ -762,8 +778,8 @@ void material_centric_compact(const int ncells, const bool memory_verbose,
       const int ncm = ncellsmat[m];
       const int nblocks = ceil(ncm / (double)NTHREADS);
       mcc_average_density_by_neighbourhood<<<nblocks, NTHREADS>>>(
-          ncm, m, subset2mesh, mesh2subset, cen_x, cen_y, nnbrs, nbrs,
-          MatDensity_average, Densityfrac);
+          ncm, subset2mesh[m], mesh2subset[m], cen_x, cen_y, nnbrs, nbrs,
+          MatDensity_average[m], Densityfrac[m]);
       gpu_check(cudaDeviceSynchronize());
     }
 
@@ -804,12 +820,12 @@ void material_centric_compact(const int ncells, const bool memory_verbose,
     }
 #endif // if 0
 
+    if(iter > 0)
     time_sum += cpu_timer_stop(tstart_cpu);
   }
   act_perf = time_sum * 1000.0 / itermax;
   printf("Average Material Density  -  compute time is %lf msecs\n", act_perf);
 
-#if 0
   memops8byte = ncells * nmats;
   memops8byte += (int64_t)24.5 * filled_fraction * ncells * nmats;
   memops8byte += (int64_t)8 * filled_fraction * ncells * nmats * nnbrs_ave;
@@ -820,6 +836,8 @@ void material_centric_compact(const int ncells, const bool memory_verbose,
   penalty_msecs = 0.0;
   print_performance_estimates(act_perf, memops8byte, memops4byte, flops,
       penalty_msecs);
+
+#if 0
   //   Convert from MATERIAL-CENTRIC COMPACT DATA STRUCTURE to CELL_CENTRIC
   //   COMPACT DATA STRUCTURE
   //#define CONVERSION_CHECK 1
